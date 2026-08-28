@@ -1,0 +1,76 @@
+## ==========================================
+## 1. Archivos del Sistema Operativo & IDEs
+## ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Cursor, VS Code y Visual Studio
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vs/
+.cursor/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## ==========================================
+## 2. Backend (.NET 9 / C# / EF Core)
+## ==========================================
+# Compilación y binarios
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Archivos de publicación
+publish/
+*.azurepubxml
+*.pubxml
+
+# Secretos y configuraciones de entorno locales
+appsettings.Development.json
+appsettings.Production.json
+appsettings.Local.json
+*.secrets.json
+
+## ==========================================
+## 3. Frontend (Node.js / Vue 3 / Vite)
+## ==========================================
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Build de producción
+dist/
+dist-ssr/
+*.local
+
+# Logs de depuración de npm y Vite
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Variables de entorno frontend
+.env
+.env.local
+.env.*.local
+!.env.example
+
+## ==========================================
+## 4. Docker & Base de Datos (MySQL)
+## ==========================================
+# Volúmenes de bases de datos locales
+mysql_data/
+*.sql.gz
+*.dump
+
+# Variables de entorno para contenedores
+.env.docker
+docker-compose.override.yml
