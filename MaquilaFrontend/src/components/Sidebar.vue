@@ -5,14 +5,19 @@ import { useRouter, useRoute } from 'vue-router'
 const props = defineProps({
   userRole: {
     type: String,
-    default: 'admin' // 'admin', 'inventario', 'pedidos'
+    default: 'admin'
+  },
+  isOpen: {
+    type: Boolean,
+    default: false
   }
 })
+
+const emit = defineEmits(['close'])
 
 const router = useRouter()
 const route = useRoute()
 
-// Definición de módulos con los roles permitidos para cada uno
 const allMenuItems = [
   { id: 'dashboard', name: 'Dashboard', path: '/dashboard', roles: ['admin', 'inventario', 'pedidos'], icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { id: 'inventario', name: 'Inventario / Telas', path: '/inventario', roles: ['admin', 'inventario'], icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
@@ -21,10 +26,14 @@ const allMenuItems = [
   { id: 'pedidos', name: 'Pedidos Maquila', path: '/pedidos', roles: ['admin', 'pedidos'], icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01' },
 ]
 
-// Menús filtrados por rol
 const visibleMenuItems = computed(() => {
   return allMenuItems.filter(item => item.roles.includes(props.userRole))
 })
+
+const navigateTo = (path) => {
+  router.push(path)
+  emit('close') // Cierra automáticamente el sidebar en pantallas móviles al hacer clic
+}
 
 const handleLogout = () => {
   localStorage.removeItem('user_role')
@@ -33,52 +42,76 @@ const handleLogout = () => {
 </script>
 
 <template>
-  <aside class="fixed inset-y-0 left-0 z-50 w-64 my-4 ml-4 bg-white shadow-xl rounded-2xl flex flex-col transition-all duration-300">
-    <!-- Logo -->
-    <div class="h-20 flex items-center px-6 border-b border-slate-100">
-      <div class="h-9 w-9 rounded-xl bg-gradient-to-tl from-purple-700 to-pink-500 flex items-center justify-center text-white shadow-md">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      </div>
-      <span class="ml-3 font-bold text-slate-800 tracking-tight text-sm uppercase">Soft UI Maquila</span>
-    </div>
+  <div>
+    <!-- Fondo oscuro en móvil cuando el sidebar está abierto -->
+    <div 
+      v-if="isOpen" 
+      @click="emit('close')"
+      class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm xl:hidden transition-opacity"
+    ></div>
 
-    <!-- Navegación -->
-    <div class="flex-1 overflow-y-auto px-4 py-4 space-y-1">
-      <p class="text-xs font-bold text-slate-400 px-3 uppercase tracking-wider mb-2">Módulos</p>
-      
-      <button
-        v-for="item in visibleMenuItems"
-        :key="item.id"
-        @click="router.push(item.path)"
-        :class="[
-          'w-full flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200',
-          route.path === item.path
-            ? 'bg-white shadow-lg text-slate-800 font-semibold' 
-            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-        ]"
-      >
-        <div :class="[
-          'w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-colors shadow-sm',
-          route.path === item.path ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white' : 'bg-slate-100 text-slate-600'
-        ]">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
-          </svg>
+    <!-- Contenedor del Sidebar -->
+    <aside 
+      :class="[
+        'fixed inset-y-0 left-0 z-50 w-64 my-4 ml-4 bg-white shadow-xl rounded-2xl flex flex-col transition-transform duration-300 ease-in-out',
+        isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'
+      ]"
+    >
+      <!-- Logo y botón de cerrar en móvil -->
+      <div class="h-20 flex items-center justify-between px-6 border-b border-slate-100">
+        <div class="flex items-center">
+          <div class="h-9 w-9 rounded-xl bg-gradient-to-tl from-purple-700 to-pink-500 flex items-center justify-center text-white shadow-md">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <span class="ml-3 font-bold text-slate-800 tracking-tight text-sm uppercase">Soft UI Maquila</span>
         </div>
-        {{ item.name }}
-      </button>
-    </div>
 
-    <!-- Salir -->
-    <div class="p-4 border-t border-slate-100">
-      <button @click="handleLogout" class="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl transition">
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-        Cerrar Sesión
-      </button>
-    </div>
-  </aside>
+        <!-- Botón de cerrar (Visible solo en pantallas pequeñas) -->
+        <button @click="emit('close')" class="xl:hidden text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Navegación -->
+      <div class="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+        <p class="text-xs font-bold text-slate-400 px-3 uppercase tracking-wider mb-2">Módulos</p>
+        
+        <button
+          v-for="item in visibleMenuItems"
+          :key="item.id"
+          @click="navigateTo(item.path)"
+          :class="[
+            'w-full flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200',
+            route.path === item.path
+              ? 'bg-white shadow-lg text-slate-800 font-semibold' 
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+          ]"
+        >
+          <div :class="[
+            'w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-colors shadow-sm',
+            route.path === item.path ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white' : 'bg-slate-100 text-slate-600'
+          ]">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
+            </svg>
+          </div>
+          {{ item.name }}
+        </button>
+      </div>
+
+      <!-- Salir -->
+      <div class="p-4 border-t border-slate-100">
+        <button @click="handleLogout" class="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-xl transition">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Cerrar Sesión
+        </button>
+      </div>
+    </aside>
+  </div>
 </template>
