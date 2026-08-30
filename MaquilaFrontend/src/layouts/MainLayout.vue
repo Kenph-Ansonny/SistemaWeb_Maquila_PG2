@@ -6,25 +6,30 @@ import Navbar from '../components/Navbar.vue'
 
 const route = useRoute()
 
-// Simulación de rol del usuario (guardado en localStorage al iniciar sesión)
+const isSidebarOpen = ref(false)
 const userRole = ref(localStorage.getItem('user_role') || 'admin')
 const userName = ref(localStorage.getItem('user_name') || 'Admin Maquila')
 
-// Obtiene el título de la página actual desde el meta de la ruta
 const currentRouteName = computed(() => route.meta.title || 'Dashboard')
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-50 flex">
-    <!-- Sidebar Modular -->
-    <Sidebar :userRole="userRole" />
+    <!-- Sidebar con estado y evento para cerrar -->
+    <Sidebar 
+      :userRole="userRole" 
+      :isOpen="isSidebarOpen"
+      @close="isSidebarOpen = false" 
+    />
 
-    <!-- Contenedor Derecho Dinámico -->
-    <div class="flex-1 ml-72 p-6">
-      <!-- Navbar Modular -->
-      <Navbar :currentRoute="currentRouteName" :userName="userName" />
+    <!-- Contenedor adaptativo: Margen 0 en móvil, margen a la izquierda en pantallas grandes (xl:ml-72) -->
+    <div class="flex-1 w-full xl:ml-72 p-4 sm:p-6 transition-all duration-300">
+      <Navbar 
+        :currentRoute="currentRouteName" 
+        :userName="userName" 
+        @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
+      />
 
-      <!-- Aquí se renderiza la vista correspondiente del router -->
       <slot></slot>
     </div>
   </div>
