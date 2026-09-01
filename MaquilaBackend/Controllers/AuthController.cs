@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MaquilaBackend.Data;
 using MaquilaBackend.DTOs;
 using MaquilaBackend.Models;
+using System.Text.Json;
 
 namespace MaquilaBackend.Controllers;
 
@@ -23,7 +24,7 @@ public class AuthController : ControllerBase
         var input = dto.Identificador?.Trim() ?? string.Empty;
         var passwordInput = dto.Password?.Trim() ?? string.Empty;
 
-        // 1. Buscar coincidencia por correo o nombre_usuario
+        // 1. Buscar coincidencia
         var usuario = await _context.Usuarios
             .Include(u => u.UsuarioRoles)
             .ThenInclude(ur => ur.Rol)
@@ -35,13 +36,13 @@ public class AuthController : ControllerBase
         if (!usuario.EstadoUsuario)
             return Unauthorized(new { message = "Tu cuenta se encuentra inactiva. Contacta al administrador." });
 
-        // 2. Verificación con BCrypt
+        // 2. Verificación de hash con BCrypt
         bool passwordValida = false;
         try
         {
             passwordValida = BCrypt.Net.BCrypt.Verify(passwordInput, usuario.PasswordHash);
         }
-        catch (Exception)
+        catch
         {
             passwordValida = false;
         }
@@ -53,23 +54,60 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Contraseña incorrecta." });
         }
 
-        // 3. Reiniciar intentos fallidos
+        // 3. Reiniciar intentos y actualizar última fecha de acceso
         usuario.IntentosFallidos = 0;
         usuario.FechaUltimoAcceso = DateTime.UtcNow;
+
+        // 4. Registro en Bitácora: LOGIN EXITOSO
+        var logAcceso = new Bitacora
+        {
+            IdUsuario = usuario.IdUsuario,
+            IdModulo = 1, // Módulo USUARIOS / SEGURIDAD
+            Accion = "LOGIN",
+            TablaAfectada = "Usuarios",
+            IdRegistro = usuario.IdUsuario.ToString(),
+            ValoresAnteriores = null,
+            ValoresNuevos = JsonSerializer.Serialize(new { 
+                Evento = "Inicio de sesión exitoso", 
+                Usuario = usuario.NombreUsuario,
+                Fecha = DateTime.UtcNow 
+            }),
+            DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+            FechaRegistro = DateTime.UtcNow
+        };
+        _context.Bitacora.Add(logAcceso);
+
         await _context.SaveChangesAsync();
 
-        var rolPrincipal = usuario.UsuarioRoles.FirstOrDefault()?.Rol.NombreRol.ToLower() ?? "admin";
+        // 5. Cargar permisos asociados
+        var rolesIds = usuario.UsuarioRoles.Select(ur => ur.IdRol).ToList();
 
-        string rolFrontend = "admin";
-        if (rolPrincipal.Contains("conta")) rolFrontend = "contador";
-        else if (rolPrincipal.Contains("inventario") || rolPrincipal.Contains("operador")) rolFrontend = "inventario";
-        else if (rolPrincipal.Contains("pedido")) rolFrontend = "pedidos";
+        var permisosDb = await _context.PermisosRol
+            .Include(pr => pr.Modulo)
+            .Where(pr => rolesIds.Contains(pr.IdRol))
+            .AsNoTracking()
+            .ToListAsync();
+
+        var permisos = permisosDb
+            .GroupBy(pr => new { pr.Modulo.CodigoModulo, pr.Modulo.NombreModulo })
+            .Select(g => new PermisoModuloDto(
+                g.Key.CodigoModulo,
+                g.Key.NombreModulo,
+                g.Any(p => p.PuedeConsultar),
+                g.Any(p => p.PuedeInsertar),
+                g.Any(p => p.PuedeModificar),
+                g.Any(p => p.PuedeEliminar)
+            ))
+            .ToList();
+
+        var rolNombre = usuario.UsuarioRoles.FirstOrDefault()?.Rol.NombreRol ?? "Usuario";
 
         return Ok(new LoginResponseDto(
             usuario.IdUsuario,
             usuario.NombreUsuario,
             usuario.Correo,
-            rolFrontend,
+            rolNombre,
+            permisos,
             "session-active"
         ));
     }

@@ -12,12 +12,13 @@ public class MaquilaDbContext : DbContext
     public DbSet<Modulo> Modulos => Set<Modulo>();
     public DbSet<UsuarioRol> UsuarioRoles => Set<UsuarioRol>();
     public DbSet<PermisoRol> PermisosRol => Set<PermisoRol>();
+    public DbSet<Bitacora> Bitacora => Set<Bitacora>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Llave compuesta para Usuario_Roles
+        // 1. Configuración de la tabla pivote Usuario_Roles
         modelBuilder.Entity<UsuarioRol>()
             .HasKey(ur => new { ur.IdUsuario, ur.IdRol });
 
@@ -31,8 +32,18 @@ public class MaquilaDbContext : DbContext
             .WithMany(r => r.UsuarioRoles)
             .HasForeignKey(ur => ur.IdRol);
 
-        // Llave compuesta para Permisos_Rol
+        // 2. Configuración de la tabla pivote Permisos_Rol (Llave y Relaciones Foráneas)
         modelBuilder.Entity<PermisoRol>()
             .HasKey(pr => new { pr.IdRol, pr.IdModulo });
+
+        modelBuilder.Entity<PermisoRol>()
+            .HasOne(pr => pr.Rol)
+            .WithMany(r => r.PermisosRol)
+            .HasForeignKey(pr => pr.IdRol);
+
+        modelBuilder.Entity<PermisoRol>()
+            .HasOne(pr => pr.Modulo)
+            .WithMany()
+            .HasForeignKey(pr => pr.IdModulo);
     }
 }
