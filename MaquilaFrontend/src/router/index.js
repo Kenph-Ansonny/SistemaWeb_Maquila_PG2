@@ -9,12 +9,45 @@ const routes = [
     component: LoginView,
     meta: { title: 'Iniciar Sesión' }
   },
+
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/ResetPasswordView.vue'),
+    meta: { title: 'Restablecer Contraseña' }
+  },
   { 
     path: '/dashboard', 
     name: 'Dashboard', 
     component: DashboardView,
     meta: { title: 'Dashboard General' }
-  }
+  },
+
+  // rutas de los VIEWS
+  
+  // Rutas de Inventario
+  { path: '/inventario/articulos', name: 'Articulos', component: DashboardView, meta: { title: 'Artículos y Telas' } },
+  { path: '/inventario/almacenes', name: 'Almacenes', component: DashboardView, meta: { title: 'Almacenes y Bodegas' } },
+  { path: '/inventario/unidades', name: 'Unidades', component: DashboardView, meta: { title: 'Unidades y Conversiones' } },
+  { path: '/inventario/kardex', name: 'Kardex', component: DashboardView, meta: { title: 'Kardex Transaccional' } },
+
+  // Rutas de Producción
+  { path: '/produccion/recetas', name: 'Recetas', component: DashboardView, meta: { title: 'Fichas Técnicas (BOM)' } },
+  { path: '/produccion/ordenes', name: 'OrdenesProduccion', component: DashboardView, meta: { title: 'Órdenes de Producción' } },
+  { path: '/produccion/mermas', name: 'Mermas', component: DashboardView, meta: { title: 'Control de Mermas' } },
+
+  // Rutas de Compras
+  { path: '/compras/proveedores', name: 'Proveedores', component: DashboardView, meta: { title: 'Catálogo de Proveedores' } },
+  { path: '/compras/registro', name: 'RegistroCompras', component: DashboardView, meta: { title: 'Registro de Compras' } },
+
+  // Rutas de Pedidos
+  { path: '/pedidos/clientes', name: 'Clientes', component: DashboardView, meta: { title: 'Catálogo de Clientes' } },
+  { path: '/pedidos/lista', name: 'PedidosLista', component: DashboardView, meta: { title: 'Pedidos de Maquila' } },
+
+  // Rutas de Seguridad
+  { path: '/seguridad/usuarios', name: 'Usuarios', component: () => import('../views/UsuariosView.vue'), meta: { title: 'Gestión de Usuarios' } },
+  { path: '/seguridad/roles', name: 'RolesPermisos', component: DashboardView, meta: { title: 'Roles y Permisos' } },
+  { path: '/seguridad/bitacora', name: 'Bitacora', component: DashboardView, meta: { title: 'Bitácora de Auditoría' } }
 ]
 
 const router = createRouter({
