@@ -8,6 +8,7 @@ import logoImg from '../assets/logo.png'
 const router = useRouter()
 const identifier = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const rememberMe = ref(false)
 const isLoading = ref(false)
 
@@ -15,7 +16,7 @@ const isLoading = ref(false)
 const notification = ref({
   show: false,
   message: '',
-  type: 'error' // 'success' o 'error'
+  type: 'error'
 })
 
 const triggerNotification = (message, type = 'error') => {
@@ -39,11 +40,13 @@ const handleLogin = async () => {
       password: password.value
     })
 
-    const { nombreUsuario, rolPrincipal } = res.data
+    const { idUsuario, nombreUsuario, rolPrincipal, permisos } = res.data
 
-    //guarda sesion
+    // Persistencia de sesión completa en LocalStorage
+    localStorage.setItem('user_id', String(idUsuario))
     localStorage.setItem('user_name', nombreUsuario)
     localStorage.setItem('user_role', rolPrincipal)
+    localStorage.setItem('user_permissions', JSON.stringify(permisos || []))
 
     triggerNotification(`¡Bienvenido/a, ${nombreUsuario}!`, 'success')
 
@@ -72,7 +75,7 @@ const handleLogin = async () => {
       leave-to-class="opacity-0"
     >
       <div 
-        v-if="notification.show"
+        v-if="notification.show" 
         :class="[
           'fixed top-5 right-5 z-50 flex items-center px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold border backdrop-blur-md transition-all',
           notification.type === 'success' 
@@ -120,13 +123,25 @@ const handleLogin = async () => {
                 />
               </div>
             </div>
+
             <div>
-              <label for="password" class="block text-sm font-medium text-slate-700">Contraseña</label>
+              <div class="flex items-center justify-between">
+                <label for="password" class="block text-sm font-medium text-slate-700">Contraseña</label>
+                <!-- Checkbox para alternar la visibilidad de la contraseña -->
+                <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    v-model="showPassword" 
+                    class="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Mostrar</span>
+                </label>
+              </div>
               <div class="mt-1">
                 <input
                   id="password"
                   v-model="password"
-                  type="password"
+                  :type="showPassword ? 'text' : 'password'"
                   required
                   placeholder="••••••••"
                   class="block w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-slate-900 placeholder-slate-400 shadow-sm focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 sm:text-sm"
@@ -142,7 +157,7 @@ const handleLogin = async () => {
                   type="checkbox"
                   class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label for="remember-me" class="ml-2 block text-sm text-slate-700">Recordarme</label>
+                <label for="remember-me" class="ml-2 block text-sm text-slate-700 select-none">Recordarme</label>
               </div>
 
               <div class="text-sm">

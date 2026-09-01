@@ -46,8 +46,8 @@ const routes = [
 
   // Rutas de Seguridad
   { path: '/seguridad/usuarios', name: 'Usuarios', component: () => import('../views/UsuariosView.vue'), meta: { title: 'Gestión de Usuarios' } },
-  { path: '/seguridad/roles', name: 'RolesPermisos', component: DashboardView, meta: { title: 'Roles y Permisos' } },
-  { path: '/seguridad/bitacora', name: 'Bitacora', component: DashboardView, meta: { title: 'Bitácora de Auditoría' } }
+  { path: '/seguridad/roles', name: 'RolesPermisos', component: () => import('../views/RolesView.vue'), meta: { title: 'Roles y Permisos' }},
+  { path: '/seguridad/bitacora', name: 'Bitacora', component: () => import('../views/BitacoraView.vue'), meta: { title: 'Bitácora de Auditoría' }}
 ]
 
 const router = createRouter({
