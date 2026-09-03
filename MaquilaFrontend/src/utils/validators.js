@@ -1,77 +1,79 @@
-/*
-// Expresiones Regulares Centralizadas
-export const Patterns = {
-    ONLY_NUMBERS: /^[0-9]+$/,
-    DECIMAL: /^\d+(\.\d{1,4})?$/,
-    ALPHANUMERIC: /^[a-zA-Z0-9\sñÑáéíóúÁÉÍÓÚ]+$/,
-    EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    PHONE: /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s./0-9]*$/
-  }
-  
-  // Filtros de eventos de teclado (Previene que el usuario escriba caracteres inválidos en tiempo real)
-  export const allowOnly = {
-    numbers(event) {
-      if (!/[0-9]/.test(event.key)) event.preventDefault()
-    },
-    decimals(event, currentValue = '') {
-      if (!/[0-9.]/.test(event.key)) event.preventDefault()
-      if (event.key === '.' && currentValue.includes('.')) event.preventDefault()
-    },
-    cleanText(event) {
-      // Bloquea caracteres especiales potencialmente peligrosos (<, >, {, }, ;, ', ")
-      if (/[<>{};'"]/.test(event.key)) event.preventDefault()
+export const allowOnly = {
+  // Solo letras minúsculas/mayúsculas y números (sin espacios)
+  usuarioInput(e) {
+    const char = String.fromCharCode(e.keyCode || e.which)
+    if (!/^[a-zA-Z0-9_]$/.test(char)) {
+      e.preventDefault()
     }
-  }
-  
-  // Funciones de comprobación para usar al enviar formularios
-  export const isValid = {
-    email: (val) => Patterns.EMAIL.test(val),
-    required: (val) => val !== null && val !== undefined && val.toString().trim().length > 0,
-    minLength: (val, min) => val && val.length >= min
-  }
-    */
+  },
 
-  export const allowOnly = {
-    usuarioInput(event) {
-      // Permite letras, números, guiones, puntos, espacios, @ y !
-      const regex = /^[a-zA-Z0-9_\-@!.\s]$/
-      if (!regex.test(event.key)) {
-        event.preventDefault()
+  // Códigos de catálogo (TEL-001, IN-04): Mayúsculas, números y guiones
+  codigoInput(e) {
+    const char = String.fromCharCode(e.keyCode || e.which)
+    if (!/^[a-zA-Z0-9_-]$/.test(char)) {
+      e.preventDefault()
+    }
+  },
+
+  // Nombres de almacenes, artículos y roles
+  nombreInput(e) {
+    const char = String.fromCharCode(e.keyCode || e.which)
+    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\/]$/.test(char)) {
+      e.preventDefault()
+    }
+  },
+
+  // Descripciones y observaciones generales
+  descripcionInput(e) {
+    const char = String.fromCharCode(e.keyCode || e.which)
+    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\,\:\(\)\/]$/.test(char)) {
+      e.preventDefault()
+    }
+  }
+}
+
+export const TextRules = {
+  esCodigoValido(val) {
+    if (!val) return false
+    return /^[A-Z0-9_-]{2,30}$/.test(val.trim().toUpperCase())
+  },
+  esNombreValido(val, min = 3, max = 80) {
+    if (!val) return false
+    const regex = new RegExp(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\\s\\-\\.\\/]{${min},${max}}$`)
+    return regex.test(val.trim())
+  },
+  esDescripcionValida(val, max = 200) {
+    if (!val) return true // Las descripciones suelen ser opcionales
+    const regex = new RegExp(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\\s\\-\\.\\,\\:\\(\\)\\/]{0,${max}}$`)
+    return regex.test(val.trim())
+  }
+}
+
+export const PasswordRules = {
+  validate(password) {
+    const p = password || ''
+    return {
+      minLength: p.length >= 8,
+      hasUpper: /[A-Z]/.test(p),
+      hasLower: /[a-z]/.test(p),
+      hasNumber: /[0-9]/.test(p),
+      hasSpecial: /[@$!%*#?&]/.test(p),
+      get isValid() {
+        return this.minLength && this.hasUpper && this.hasLower && this.hasNumber && this.hasSpecial
       }
     }
   }
-  
-  export const EmailRules = {
-    validate(email) {
-      if (!email) return { isValid: false, hasAt: false, hasDomain: false, noSpaces: false }
-      const hasAt = email.includes('@')
-      const hasDomain = /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)
-      const noSpaces = !/\s/.test(email)
-      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  
-      return { hasAt, hasDomain, noSpaces, isValid }
+}
+
+export const EmailRules = {
+  validate(email) {
+    const e = (email || '').trim()
+    const pattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    return {
+      hasAt: e.includes('@'),
+      hasDomain: /\.[a-zA-Z]{2,}$/.test(e),
+      noSpaces: !/\s/.test(e),
+      isValid: pattern.test(e)
     }
   }
-  
-  export const PasswordRules = {
-    validate(password) {
-      if (!password) return { isValid: false }
-  
-      const minLength = password.length >= 8
-      const hasUpper = /[A-Z]/.test(password)
-      const hasLower = /[a-z]/.test(password)
-      const hasNumber = /[0-9]/.test(password)
-      const hasSpecial = /[^A-Za-z0-9]/.test(password) // Acepta cualquier carácter especial (@, !, #, $, %, etc.)
-  
-      const isValid = minLength && hasUpper && hasLower && hasNumber && hasSpecial
-  
-      return {
-        minLength,
-        hasUpper,
-        hasLower,
-        hasNumber,
-        hasSpecial,
-        isValid
-      }
-    }
-  }
+}

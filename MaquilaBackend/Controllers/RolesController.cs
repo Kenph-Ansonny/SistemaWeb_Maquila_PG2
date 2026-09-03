@@ -4,6 +4,7 @@ using MaquilaBackend.Data;
 using MaquilaBackend.DTOs;
 using MaquilaBackend.Models;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MaquilaBackend.Controllers;
 
@@ -27,12 +28,12 @@ public class RolesController : ControllerBase
         return 1;
     }
 
-    // 1. Obtener lista de roles con conteo de usuarios
     [HttpGet]
     public async Task<ActionResult<IEnumerable<RolListDto>>> GetRoles()
     {
         var roles = await _context.Roles
             .Include(r => r.UsuarioRoles)
+            .AsNoTracking()
             .Select(r => new RolListDto(
                 r.IdRol,
                 r.NombreRol,
@@ -45,13 +46,13 @@ public class RolesController : ControllerBase
         return Ok(roles);
     }
 
-    // 2. Obtener matriz completa de permisos para un rol específico
     [HttpGet("{idRol}/permisos")]
     public async Task<ActionResult<IEnumerable<PermisoModuloItemDto>>> GetPermisosPorRol(int idRol)
     {
-        var modulos = await _context.Modulos.ToListAsync();
+        var modulos = await _context.Modulos.AsNoTracking().ToListAsync();
         var permisosAsignados = await _context.PermisosRol
             .Where(p => p.IdRol == idRol)
+            .AsNoTracking()
             .ToListAsync();
 
         var resultado = modulos.Select(m => {
@@ -70,11 +71,20 @@ public class RolesController : ControllerBase
         return Ok(resultado);
     }
 
-    // 3. Crear nuevo Rol
     [HttpPost]
     public async Task<IActionResult> CrearRol([FromBody] CrearRolDto dto)
     {
-        if (await _context.Roles.AnyAsync(r => r.NombreRol.ToLower() == dto.NombreRol.Trim().ToLower()))
+        var nombreLimpio = dto.NombreRol?.Trim() ?? string.Empty;
+        var descLimpia = dto.Descripcion?.Trim();
+
+        // Validaciones Regex
+        if (!Regex.IsMatch(nombreLimpio, @"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\/]{3,50}$"))
+            return BadRequest(new { message = "El nombre del rol contiene caracteres inválidos o longitud incorrecta (mínimo 3, máximo 50)." });
+
+        if (!string.IsNullOrWhiteSpace(descLimpia) && !Regex.IsMatch(descLimpia, @"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\,\:\(\)\/]{0,200}$"))
+            return BadRequest(new { message = "La descripción contiene símbolos no permitidos o supera los 200 caracteres." });
+
+        if (await _context.Roles.AnyAsync(r => r.NombreRol.ToLower() == nombreLimpio.ToLower()))
             return BadRequest(new { message = "Ya existe un rol con ese nombre." });
 
         using var transaction = await _context.Database.BeginTransactionAsync();
@@ -82,15 +92,14 @@ public class RolesController : ControllerBase
         {
             var nuevoRol = new Rol
             {
-                NombreRol = dto.NombreRol.Trim(),
-                Descripcion = dto.Descripcion?.Trim(),
+                NombreRol = nombreLimpio,
+                Descripcion = descLimpia,
                 EstadoRol = true
             };
 
             _context.Roles.Add(nuevoRol);
             await _context.SaveChangesAsync();
 
-            // Inicializar permisos en falso para todos los módulos
             var modulos = await _context.Modulos.ToListAsync();
             foreach (var mod in modulos)
             {
@@ -106,16 +115,15 @@ public class RolesController : ControllerBase
             }
             await _context.SaveChangesAsync();
 
-            // Bitácora
             var log = new Bitacora
             {
                 IdUsuario = ObtenerUsuarioIdSesion(),
-                IdModulo = 1,
+                IdModulo = 13, // ROLES
                 Accion = "INSERT",
                 TablaAfectada = "Roles",
                 IdRegistro = nuevoRol.IdRol.ToString(),
                 ValoresAnteriores = null,
-                ValoresNuevos = JsonSerializer.Serialize(new { nuevoRol.NombreRol, nuevoRol.Descripcion }),
+                ValoresNuevos = JsonSerializer.Serialize(dto),
                 DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
                 FechaRegistro = DateTime.UtcNow
             };
@@ -132,27 +140,38 @@ public class RolesController : ControllerBase
         }
     }
 
-    // 4. Modificar información básica del Rol
     [HttpPut("{idRol}")]
     public async Task<IActionResult> EditarRol(int idRol, [FromBody] EditarRolDto dto)
     {
         var rol = await _context.Roles.FindAsync(idRol);
         if (rol == null) return NotFound(new { message = "Rol no encontrado." });
 
-        var valoresAnteriores = new { rol.NombreRol, rol.Descripcion };
+        var nombreLimpio = dto.NombreRol?.Trim() ?? string.Empty;
+        var descLimpia = dto.Descripcion?.Trim();
 
-        rol.NombreRol = dto.NombreRol.Trim();
-        rol.Descripcion = dto.Descripcion?.Trim();
+        // Validaciones Regex
+        if (!Regex.IsMatch(nombreLimpio, @"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\/]{3,50}$"))
+            return BadRequest(new { message = "El nombre del rol contiene caracteres inválidos." });
+
+        if (!string.IsNullOrWhiteSpace(descLimpia) && !Regex.IsMatch(descLimpia, @"^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\,\:\(\)\/]{0,200}$"))
+            return BadRequest(new { message = "La descripción contiene símbolos no permitidos." });
+
+        if (await _context.Roles.AnyAsync(r => r.NombreRol.ToLower() == nombreLimpio.ToLower() && r.IdRol != idRol))
+            return BadRequest(new { message = "Ya existe otro rol con ese nombre." });
+
+        var valoresAnteriores = new { rol.NombreRol, rol.Descripcion };
+        rol.NombreRol = nombreLimpio;
+        rol.Descripcion = descLimpia;
 
         var log = new Bitacora
         {
             IdUsuario = ObtenerUsuarioIdSesion(),
-            IdModulo = 1,
+            IdModulo = 13,
             Accion = "UPDATE",
             TablaAfectada = "Roles",
             IdRegistro = idRol.ToString(),
             ValoresAnteriores = JsonSerializer.Serialize(valoresAnteriores),
-            ValoresNuevos = JsonSerializer.Serialize(new { dto.NombreRol, dto.Descripcion }),
+            ValoresNuevos = JsonSerializer.Serialize(dto),
             DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
             FechaRegistro = DateTime.UtcNow
         };
@@ -162,7 +181,6 @@ public class RolesController : ControllerBase
         return Ok(new { message = "Información del rol actualizada." });
     }
 
-    // 5. Guardar/Actualizar la matriz de permisos
     [HttpPut("{idRol}/permisos")]
     public async Task<IActionResult> GuardarPermisos(int idRol, [FromBody] List<PermisoModuloItemDto> permisosDto)
     {
@@ -190,11 +208,10 @@ public class RolesController : ControllerBase
             }
             await _context.SaveChangesAsync();
 
-            // Bitácora
             var log = new Bitacora
             {
                 IdUsuario = ObtenerUsuarioIdSesion(),
-                IdModulo = 1,
+                IdModulo = 13,
                 Accion = "UPDATE_PERMISOS",
                 TablaAfectada = "Permisos_Rol",
                 IdRegistro = idRol.ToString(),
@@ -216,12 +233,11 @@ public class RolesController : ControllerBase
         }
     }
 
-    // 6. Activar / Desactivar Rol
     [HttpPatch("{idRol}/toggle-estado")]
     public async Task<IActionResult> ToggleEstado(int idRol)
     {
         if (idRol == 1)
-            return BadRequest(new { message = "El rol Administrador no puede desactivarse." });
+            return BadRequest(new { message = "El rol Administrador no puede ser desactivado." });
 
         var rol = await _context.Roles.FindAsync(idRol);
         if (rol == null) return NotFound(new { message = "Rol no encontrado." });
@@ -231,7 +247,7 @@ public class RolesController : ControllerBase
         var log = new Bitacora
         {
             IdUsuario = ObtenerUsuarioIdSesion(),
-            IdModulo = 1,
+            IdModulo = 13,
             Accion = "STATE_CHANGE",
             TablaAfectada = "Roles",
             IdRegistro = idRol.ToString(),
