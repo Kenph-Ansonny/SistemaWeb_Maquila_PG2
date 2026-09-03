@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import MainLayout from '../layouts/MainLayout.vue'
 import rolService from '../services/rolService'
 import { usePermissions } from '../composables/usePermissions'
+import { allowOnly, TextRules } from '../utils/validators'
 
 const { can } = usePermissions()
 
@@ -54,7 +55,7 @@ const rolesFiltrados = computed(() => {
 })
 
 const cargarRoles = async () => {
-  if (!can('USUARIOS', 'consultar')) {
+  if (!can('ROLES', 'consultar')) {
     isLoadingRoles.value = false
     return
   }
@@ -105,23 +106,32 @@ const abrirModalEditarRol = (rol) => {
 }
 
 const guardarRol = async () => {
-  if (!formRol.value.nombreRol.trim()) {
-    showAlert('Campo Requerido', 'El nombre del rol es obligatorio.', 'error')
+  const nombre = formRol.value.nombreRol?.trim()
+  const desc = formRol.value.descripcion?.trim()
+
+  if (!TextRules.esNombreValido(nombre, 3, 50)) {
+    showAlert('Nombre Inválido', 'El nombre del rol debe contener entre 3 y 50 caracteres alfanuméricos válidos.', 'error')
+    return
+  }
+
+  if (desc && !TextRules.esDescripcionValida(desc, 200)) {
+    showAlert('Descripción Inválida', 'La descripción supera los 200 caracteres o contiene símbolos no permitidos.', 'error')
     return
   }
 
   try {
+    const payload = { nombreRol: nombre, descripcion: desc }
     if (isEditingRol.value) {
-      await rolService.actualizar(rolSeleccionado.value.idRol, formRol.value)
-      showAlert('Éxito', 'Información del rol actualizada correctamente.')
+      await rolService.actualizar(rolSeleccionado.value.idRol, payload)
+      showAlert('Éxito', 'Información del rol actualizada.')
     } else {
-      await rolService.crear(formRol.value)
-      showAlert('Éxito', 'Nuevo rol creado con su matriz inicial de permisos.')
+      await rolService.crear(payload)
+      showAlert('Éxito', 'Nuevo rol creado con su matriz inicial de permisos[cite: 1].')
     }
     showModalRol.value = false
     await cargarRoles()
   } catch (err) {
-    showAlert('Error', err.response?.data?.message || 'Error al procesar la solicitud.', 'error')
+    showAlert('Error', err.response?.data?.message || 'Error al procesar el rol.', 'error')
   }
 }
 
@@ -208,7 +218,7 @@ onMounted(() => {
             <p class="text-[11px] text-slate-400">Selecciona para configurar privilegios</p>
           </div>
           <button 
-            v-if="can('USUARIOS', 'insertar')" 
+            v-if="can('ROLES', 'insertar')" 
             @click="abrirModalCrearRol" 
             class="px-3 py-1.5 bg-gradient-to-tl from-purple-700 to-pink-500 text-white font-semibold text-xs rounded-xl shadow-md hover:opacity-95 transition flex items-center gap-1.5"
           >
@@ -255,7 +265,7 @@ onMounted(() => {
 
             <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
               <button 
-                v-if="can('USUARIOS', 'modificar')" 
+                v-if="can('ROLES', 'modificar')" 
                 @click.stop="abrirModalEditarRol(rol)" 
                 class="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-purple-600 text-slate-600 hover:text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 shadow-sm"
               >
@@ -264,7 +274,7 @@ onMounted(() => {
               </button>
 
               <button 
-                v-if="can('USUARIOS', 'eliminar') && rol.idRol !== 1" 
+                v-if="can('ROLES', 'eliminar') && rol.idRol !== 1" 
                 @click.stop="solicitarToggleEstado(rol)" 
                 :class="[
                   'flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 shadow-sm border',
@@ -299,7 +309,7 @@ onMounted(() => {
               Descartar
             </button>
             <button 
-              v-if="can('USUARIOS', 'modificar')" 
+              v-if="can('ROLES', 'modificar')" 
               @click="guardarMatrizPermisos" 
               class="px-4 py-2 bg-gradient-to-tl from-purple-700 to-pink-500 text-white font-semibold text-xs rounded-xl shadow-md hover:opacity-95 transition flex items-center gap-1.5"
             >
@@ -358,12 +368,12 @@ onMounted(() => {
         <form @submit.prevent="guardarRol" class="space-y-3.5">
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Nombre del Rol</label>
-            <input v-model="formRol.nombreRol" required type="text" placeholder="Ej: Encargado de Bodega" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-purple-500" />
+            <input v-model="formRol.nombreRol" @keypress="allowOnly.nombreInput($event)" required maxlength="50" type="text" placeholder="Ej: Encargado de Bodega" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-purple-500" />
           </div>
 
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Descripción</label>
-            <textarea v-model="formRol.descripcion" rows="3" placeholder="Propósito del rol..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-purple-500"></textarea>
+            <textarea v-model="formRol.descripcion" @keypress="allowOnly.descripcionInput($event)" maxlength="200" rows="3" placeholder="Propósito del rol..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-purple-500"></textarea>
           </div>
 
           <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">

@@ -34,8 +34,8 @@ const allModules = [
     icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
     subItems: [
       { id: 'articulos', name: 'Artículos y Telas', path: '/inventario/articulos', moduleCode: 'ARTICULOS' },
-      { id: 'almacenes', name: 'Almacenes / Bodegas', path: '/inventario/almacenes', moduleCode: 'ARTICULOS' },
-      { id: 'unidades', name: 'Unidades y Conversiones', path: '/inventario/unidades', moduleCode: 'ARTICULOS' },
+      { id: 'almacenes', name: 'Almacenes / Bodegas', path: '/inventario/almacenes', moduleCode: 'ALMACENES' },
+      { id: 'unidades', name: 'Unidades y Conversiones', path: '/inventario/unidades', moduleCode: 'UNIDADES' },
       { id: 'kardex', name: 'Kardex Transaccional', path: '/inventario/kardex', moduleCode: 'KARDEX' }
     ]
   },
@@ -73,7 +73,7 @@ const allModules = [
     icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z',
     subItems: [
       { id: 'usuarios', name: 'Gestión Usuarios', path: '/seguridad/usuarios', moduleCode: 'USUARIOS' },
-      { id: 'roles-permisos', name: 'Roles y Permisos', path: '/seguridad/roles', moduleCode: 'USUARIOS' },
+      { id: 'roles-permisos', name: 'Roles y Permisos', path: '/seguridad/roles', moduleCode: 'ROLES' },
       { id: 'bitacora', name: 'Bitácora de Auditoría', path: '/seguridad/bitacora', moduleCode: 'USUARIOS' }
     ]
   }

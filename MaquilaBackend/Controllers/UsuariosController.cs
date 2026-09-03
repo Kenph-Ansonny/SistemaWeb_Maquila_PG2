@@ -4,6 +4,7 @@ using MaquilaBackend.Data;
 using MaquilaBackend.DTOs;
 using MaquilaBackend.Models;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace MaquilaBackend.Controllers;
 
@@ -33,6 +34,7 @@ public class UsuariosController : ControllerBase
         var usuarios = await _context.Usuarios
             .Include(u => u.UsuarioRoles)
             .ThenInclude(ur => ur.Rol)
+            .AsNoTracking()
             .Select(u => new UsuarioListDto(
                 u.IdUsuario,
                 u.NombreUsuario,
@@ -52,16 +54,33 @@ public class UsuariosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioDto dto)
     {
-        if (await _context.Usuarios.AnyAsync(u => u.Correo == dto.Correo || u.NombreUsuario == dto.NombreUsuario))
-            return BadRequest(new { message = "El usuario o correo ya está registrado." });
+        var usuarioLimpio = dto.NombreUsuario?.Trim() ?? string.Empty;
+        var correoLimpio = dto.Correo?.Trim().ToLower() ?? string.Empty;
+
+        // Validaciones Regex de Formato
+        if (!Regex.IsMatch(usuarioLimpio, @"^[a-zA-Z0-9_]{3,30}$"))
+            return BadRequest(new { message = "El nombre de usuario solo admite letras, números y guión bajo (3 a 30 caracteres)." });
+
+        if (!Regex.IsMatch(correoLimpio, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+            return BadRequest(new { message = "El formato de correo electrónico no es válido." });
+
+        // Validación de Contraseña Compleja: Mínimo 8, 1 mayúscula, 1 minúscula, 1 número, 1 símbolo
+        if (string.IsNullOrWhiteSpace(dto.Password) || 
+            !Regex.IsMatch(dto.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"))
+        {
+            return BadRequest(new { message = "La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y un carácter especial (@$!%*#?&)." });
+        }
+
+        if (await _context.Usuarios.AnyAsync(u => u.Correo.ToLower() == correoLimpio || u.NombreUsuario.ToLower() == usuarioLimpio.ToLower()))
+            return BadRequest(new { message = "El nombre de usuario o correo ya se encuentra registrado." });
 
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var nuevoUsuario = new Usuario
             {
-                NombreUsuario = dto.NombreUsuario.Trim(),
-                Correo = dto.Correo.Trim(),
+                NombreUsuario = usuarioLimpio,
+                Correo = correoLimpio,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 EstadoUsuario = true,
                 FechaCreacion = DateTime.UtcNow,
@@ -83,7 +102,7 @@ public class UsuariosController : ControllerBase
             var log = new Bitacora
             {
                 IdUsuario = ObtenerUsuarioIdSesion(),
-                IdModulo = 1,
+                IdModulo = 1, // USUARIOS
                 Accion = "INSERT",
                 TablaAfectada = "Usuarios",
                 IdRegistro = nuevoUsuario.IdUsuario.ToString(),
@@ -115,13 +134,32 @@ public class UsuariosController : ControllerBase
         if (usuario == null)
             return NotFound(new { message = "Usuario no encontrado." });
 
+        var usuarioLimpio = dto.NombreUsuario?.Trim() ?? string.Empty;
+        var correoLimpio = dto.Correo?.Trim().ToLower() ?? string.Empty;
+
+        // Validaciones Regex de Formato
+        if (!Regex.IsMatch(usuarioLimpio, @"^[a-zA-Z0-9_]{3,30}$"))
+            return BadRequest(new { message = "El nombre de usuario contiene caracteres no válidos." });
+
+        if (!Regex.IsMatch(correoLimpio, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+            return BadRequest(new { message = "El formato de correo no es válido." });
+
+        if (await _context.Usuarios.AnyAsync(u => (u.Correo.ToLower() == correoLimpio || u.NombreUsuario.ToLower() == usuarioLimpio.ToLower()) && u.IdUsuario != id))
+            return BadRequest(new { message = "El nombre de usuario o correo ya pertenece a otra cuenta." });
+
+        if (!string.IsNullOrWhiteSpace(dto.Password))
+        {
+            if (!Regex.IsMatch(dto.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"))
+                return BadRequest(new { message = "La nueva contraseña no cumple con los requisitos de seguridad establecidos." });
+        }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             var valoresAnteriores = new { usuario.NombreUsuario, usuario.Correo };
 
-            usuario.NombreUsuario = dto.NombreUsuario.Trim();
-            usuario.Correo = dto.Correo.Trim();
+            usuario.NombreUsuario = usuarioLimpio;
+            usuario.Correo = correoLimpio;
 
             if (!string.IsNullOrWhiteSpace(dto.Password))
             {
@@ -170,17 +208,18 @@ public class UsuariosController : ControllerBase
         if (usuario == null)
             return NotFound(new { message = "Usuario no encontrado." });
 
-        // Alternar estado
+        if (id == 1 && usuario.EstadoUsuario)
+            return BadRequest(new { message = "La cuenta principal de administrador no puede ser desactivada." });
+
         usuario.EstadoUsuario = !usuario.EstadoUsuario;
 
-        // Actualizar FechaBloqueo según el nuevo estado
         if (!usuario.EstadoUsuario)
         {
-            usuario.FechaBloqueo = DateTime.UtcNow; // Se bloqueó / desactivó
+            usuario.FechaBloqueo = DateTime.UtcNow;
         }
         else
         {
-            usuario.FechaBloqueo = null; // Se desbloqueó / reactivó
+            usuario.FechaBloqueo = null;
             usuario.IntentosFallidos = 0;
         }
 
@@ -210,6 +249,7 @@ public class UsuariosController : ControllerBase
     {
         var roles = await _context.Roles
             .Where(r => r.EstadoRol)
+            .AsNoTracking()
             .Select(r => new { r.IdRol, r.NombreRol, r.Descripcion })
             .ToListAsync();
 

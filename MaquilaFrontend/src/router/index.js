@@ -26,9 +26,9 @@ const routes = [
   // rutas de los VIEWS
   
   // Rutas de Inventario
-  { path: '/inventario/articulos', name: 'Articulos', component: DashboardView, meta: { title: 'Artículos y Telas' } },
-  { path: '/inventario/almacenes', name: 'Almacenes', component: DashboardView, meta: { title: 'Almacenes y Bodegas' } },
-  { path: '/inventario/unidades', name: 'Unidades', component: DashboardView, meta: { title: 'Unidades y Conversiones' } },
+  { path: '/inventario/articulos', name: 'Articulos', component: () => import('../views/ArticulosView.vue'), meta: { title: 'Catálogo de Artículos' } },
+  { path: '/inventario/almacenes', name: 'Almacenes', component: () => import('../views/AlmacenesView.vue'), meta: { title: 'Almacenes y Bodegas' } },
+  { path: '/inventario/unidades', name: 'Unidades', component: () => import('../views/UnidadesView.vue'), meta: { title: 'Unidades y Conversiones' } },
   { path: '/inventario/kardex', name: 'Kardex', component: DashboardView, meta: { title: 'Kardex Transaccional' } },
 
   // Rutas de Producción
