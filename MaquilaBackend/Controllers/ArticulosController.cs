@@ -5,11 +5,14 @@ using MaquilaBackend.DTOs;
 using MaquilaBackend.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace MaquilaBackend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ArticulosController : ControllerBase
 {
     private readonly MaquilaDbContext _context;
@@ -19,13 +22,12 @@ public class ArticulosController : ControllerBase
         _context = context;
     }
 
-    private int ObtenerUsuarioIdSesion()
+        private int ObtenerUsuarioIdSesion()
     {
-        if (Request.Headers.TryGetValue("X-User-Id", out var val) && int.TryParse(val, out int userId))
-        {
-            return userId;
-        }
-        return 1;
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out int userId))
+            throw new UnauthorizedAccessException("No se pudo identificar al usuario autenticado.");
+        return userId;
     }
 
     [HttpGet]

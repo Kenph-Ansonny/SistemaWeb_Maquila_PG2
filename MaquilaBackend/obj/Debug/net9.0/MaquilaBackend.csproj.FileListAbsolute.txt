@@ -8,6 +8,7 @@ C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\MaquilaBackend.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\MaquilaBackend.pdb
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\BCrypt-Net-Next.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Humanizer.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.Bcl.AsyncInterfaces.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.Build.Locator.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.CodeAnalysis.dll
@@ -30,6 +31,12 @@ C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.Extensions.L
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.Extensions.Logging.Abstractions.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.Extensions.Options.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.IdentityModel.Abstractions.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.IdentityModel.Logging.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.IdentityModel.Tokens.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Microsoft.OpenApi.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\Mono.TextTemplating.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\MySqlConnector.dll
@@ -43,6 +50,7 @@ C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\System.Composition.Con
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\System.Composition.Hosting.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\System.Composition.Runtime.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\System.Composition.TypedParts.dll
+C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\System.IdentityModel.Tokens.Jwt.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\System.Text.Json.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\cs\Microsoft.CodeAnalysis.resources.dll
 C:\SistemaWeb_Maquila_PG2\MaquilaBackend\bin\Debug\net9.0\de\Microsoft.CodeAnalysis.resources.dll

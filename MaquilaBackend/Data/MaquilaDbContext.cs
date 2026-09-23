@@ -23,11 +23,15 @@ public class MaquilaDbContext : DbContext
     public DbSet<Existencia> Existencias => Set<Existencia>();
     public DbSet<ProductoTerminadoDetalle> ProductoTerminadoDetalles => Set<ProductoTerminadoDetalle>();
 
+    //Modulo de Produccion
+    public DbSet<Receta> Recetas => Set<Receta>();
+    public DbSet<RecetaDetalle> RecetaDetalles => Set<RecetaDetalle>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
         //Modulo de seguridad
-        // 1 Configuración de la tabla pivote Usuario_Roles
         modelBuilder.Entity<UsuarioRol>()
             .HasKey(ur => new { ur.IdUsuario, ur.IdRol });
 
@@ -41,7 +45,6 @@ public class MaquilaDbContext : DbContext
             .WithMany(r => r.UsuarioRoles)
             .HasForeignKey(ur => ur.IdRol);
 
-        // 2 Configuración de la tabla pivote Permisos_Rol PK y FK
         modelBuilder.Entity<PermisoRol>()
             .HasKey(pr => new { pr.IdRol, pr.IdModulo });
 
@@ -55,7 +58,7 @@ public class MaquilaDbContext : DbContext
             .WithMany()
             .HasForeignKey(pr => pr.IdModulo);
 
-        // Modulo deInventario
+        // Modulo de Inventario
         modelBuilder.Entity<Existencia>()
             .HasKey(e => new { e.IdArticulo, e.IdAlmacen });
 
@@ -69,13 +72,11 @@ public class MaquilaDbContext : DbContext
             .WithMany(a => a.Existencias)
             .HasForeignKey(e => e.IdAlmacen);
 
-        // Relación 1 a 1 Articulo 
         modelBuilder.Entity<ProductoTerminadoDetalle>()
             .HasOne(p => p.Articulo)
             .WithOne(a => a.DetallePrenda)
             .HasForeignKey<ProductoTerminadoDetalle>(p => p.IdArticulo);
 
-        // Unidad onversion
         modelBuilder.Entity<UnidadConversion>()
             .HasKey(uc => new { uc.IdUnidadOrigen, uc.IdUnidadDestino });
 
@@ -90,5 +91,27 @@ public class MaquilaDbContext : DbContext
             .WithMany()
             .HasForeignKey(uc => uc.IdUnidadDestino)
             .OnDelete(DeleteBehavior.Restrict);
-            }
+
+        // Modulo de Produccion - Recetas
+        modelBuilder.Entity<RecetaDetalle>()
+            .HasKey(rd => new { rd.IdReceta, rd.IdArticuloInsumo });
+
+        modelBuilder.Entity<RecetaDetalle>()
+            .HasOne(rd => rd.Receta)
+            .WithMany(r => r.Detalles)
+            .HasForeignKey(rd => rd.IdReceta)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RecetaDetalle>()
+            .HasOne(rd => rd.ArticuloInsumo)
+            .WithMany()
+            .HasForeignKey(rd => rd.IdArticuloInsumo)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RecetaDetalle>()
+            .HasOne(rd => rd.UnidadConsumo)
+            .WithMany()
+            .HasForeignKey(rd => rd.IdUnidadConsumo)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
 }

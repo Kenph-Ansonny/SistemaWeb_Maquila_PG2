@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MaquilaBackend.Data;
@@ -8,6 +9,7 @@ namespace MaquilaBackend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Administrador")]
 public class BitacoraController : ControllerBase
 {
     private readonly MaquilaDbContext _context;
