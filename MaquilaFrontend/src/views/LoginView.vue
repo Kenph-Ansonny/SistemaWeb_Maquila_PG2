@@ -1,11 +1,12 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import api from '../services/api'
 import maquilaImg from '../assets/Login_FondoMaquila.jpg'
 import logoImg from '../assets/logo.png'
 
 const router = useRouter()
+const route = useRoute()
 const identifier = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -26,6 +27,15 @@ const triggerNotification = (message, type = 'error') => {
   }, 4000)
 }
 
+// Si la guarda de rutas nos trajo de vuelta aquí por falta de sesión
+// (incluyendo cuando el usuario presiona "atrás" tras cerrar sesión),
+// se lo indicamos en vez de dejarlo en un login "silencioso".
+onMounted(() => {
+  if (route.query.sessionExpired) {
+    triggerNotification('Tu sesión finalizó o no has iniciado sesión. Ingresa nuevamente.', 'error')
+  }
+})
+
 const handleLogin = async () => {
   if (!identifier.value || !password.value) {
     triggerNotification('Ingresa tu usuario/correo y contraseña.', 'error')
@@ -40,9 +50,12 @@ const handleLogin = async () => {
       password: password.value
     })
 
-    const { idUsuario, nombreUsuario, rolPrincipal, permisos } = res.data
+    const { idUsuario, nombreUsuario, rolPrincipal, permisos, token } = res.data
 
-    // Persistencia de sesión completa en LocalStorage
+    // Persistencia de sesión: el token es lo único que realmente
+    // habilita el acceso (lo valida el backend en cada petición);
+    // el resto son datos de conveniencia para la UI.
+    localStorage.setItem('auth_token', token)
     localStorage.setItem('user_id', String(idUsuario))
     localStorage.setItem('user_name', nombreUsuario)
     localStorage.setItem('user_role', rolPrincipal)
