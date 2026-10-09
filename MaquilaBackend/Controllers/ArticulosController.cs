@@ -6,6 +6,7 @@ using MaquilaBackend.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using MaquilaBackend.Security;
 using System.Security.Claims;
 
 namespace MaquilaBackend.Controllers;
@@ -31,6 +32,7 @@ public class ArticulosController : ControllerBase
     }
 
     [HttpGet]
+    [RequierePermiso("ARTICULOS", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<ArticuloListDto>>> GetArticulos()
     {
         var articulos = await _context.Articulos
@@ -65,6 +67,7 @@ public class ArticulosController : ControllerBase
     }
 
     [HttpGet("unidades-medida")]
+    [RequierePermiso("ARTICULOS", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<UnidadMedidaOptionDto>>> GetUnidadesMedida()
     {
         var unidades = await _context.UnidadesMedida
@@ -81,6 +84,7 @@ public class ArticulosController : ControllerBase
     }
 
     [HttpPost]
+    [RequierePermiso("ARTICULOS", AccionPermiso.Insertar)]
     public async Task<IActionResult> CrearArticulo([FromBody] GuardarArticuloDto dto)
     {
         var codigoLimpio = dto.CodigoArticulo?.Trim().ToUpper() ?? string.Empty;
@@ -163,6 +167,7 @@ public class ArticulosController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequierePermiso("ARTICULOS", AccionPermiso.Modificar)]
     public async Task<IActionResult> EditarArticulo(int id, [FromBody] GuardarArticuloDto dto)
     {
         var articulo = await _context.Articulos
@@ -259,6 +264,7 @@ public class ArticulosController : ControllerBase
     }
 
     [HttpPatch("{id}/toggle-estado")]
+    [RequierePermiso("ARTICULOS", AccionPermiso.Eliminar)]
     public async Task<IActionResult> ToggleEstado(int id)
     {
         var articulo = await _context.Articulos.FindAsync(id);

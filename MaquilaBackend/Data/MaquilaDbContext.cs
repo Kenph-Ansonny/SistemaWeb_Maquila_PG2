@@ -27,6 +27,12 @@ public class MaquilaDbContext : DbContext
     public DbSet<Receta> Recetas => Set<Receta>();
     public DbSet<RecetaDetalle> RecetaDetalles => Set<RecetaDetalle>();
 
+    //Modulo Pedidos
+    public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<Pedido> Pedidos { get; set; }
+    public DbSet<PedidoDetalle> PedidoDetalles { get; set; }
+    public DbSet<OrdenProduccion> OrdenesProduccion { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -112,6 +118,37 @@ public class MaquilaDbContext : DbContext
             .HasOne(rd => rd.UnidadConsumo)
             .WithMany()
             .HasForeignKey(rd => rd.IdUnidadConsumo)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Modulo Pedidos
+        modelBuilder.Entity<Pedido>()
+            .HasOne(p => p.Cliente)
+            .WithMany(c => c.Pedidos)
+            .HasForeignKey(p => p.IdCliente)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Pedido>()
+            .HasOne(p => p.Usuario)
+            .WithMany()
+            .HasForeignKey(p => p.IdUsuario)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PedidoDetalle>()
+            .HasOne(pd => pd.Pedido)
+            .WithMany(p => p.Detalles)
+            .HasForeignKey(pd => pd.IdPedido)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PedidoDetalle>()
+            .HasOne(pd => pd.ArticuloPrenda)
+            .WithMany()
+            .HasForeignKey(pd => pd.IdArticuloPrenda)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<PedidoDetalle>()
+            .HasOne(pd => pd.Receta)
+            .WithMany()
+            .HasForeignKey(pd => pd.IdReceta)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

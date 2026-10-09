@@ -15,7 +15,7 @@ export const allowOnly = {
     }
   },
 
-  // Nombres de almacenes, artículos y roles
+  // Nombres de almacenes, artículos, roles y clientes
   nombreInput(e) {
     const char = String.fromCharCode(e.keyCode || e.which)
     if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\/]$/.test(char)) {
@@ -23,7 +23,15 @@ export const allowOnly = {
     }
   },
 
-  // Descripciones y observaciones generales
+  // Teléfonos (números, +, guión, espacio y paréntesis)
+  telefonoInput(e) {
+    const char = String.fromCharCode(e.keyCode || e.which)
+    if (!/^[0-9\+\-\s\(\)]$/.test(char)) {
+      e.preventDefault()
+    }
+  },
+
+  // Descripciones, observaciones y direcciones generales
   descripcionInput(e) {
     const char = String.fromCharCode(e.keyCode || e.which)
     if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\s\-\.\,\:\(\)\/]$/.test(char)) {
@@ -37,13 +45,17 @@ export const TextRules = {
     if (!val) return false
     return /^[A-Z0-9_-]{2,30}$/.test(val.trim().toUpperCase())
   },
-  esNombreValido(val, min = 3, max = 80) {
+  esNombreValido(val, min = 3, max = 150) {
     if (!val) return false
     const regex = new RegExp(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\\s\\-\\.\\/]{${min},${max}}$`)
     return regex.test(val.trim())
   },
-  esDescripcionValida(val, max = 200) {
-    if (!val) return true // Las descripciones suelen ser opcionales
+  esTelefonoValido(val) {
+    if (!val) return true // Opcional
+    return /^[0-9\+\-\s\(\)]{7,20}$/.test(val.trim())
+  },
+  esDescripcionValida(val, max = 250) {
+    if (!val) return true // Opcional
     const regex = new RegExp(`^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑüÜ\\s\\-\\.\\,\\:\\(\\)\\/]{0,${max}}$`)
     return regex.test(val.trim())
   }

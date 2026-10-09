@@ -6,6 +6,7 @@ using MaquilaBackend.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using MaquilaBackend.Security;
 using System.Security.Claims;
 
 namespace MaquilaBackend.Controllers;
@@ -33,6 +34,7 @@ public class UnidadesController : ControllerBase
     // Endpoins Unidades de Medida
 
     [HttpGet]
+    [RequierePermiso("UNIDADES", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<UnidadMedidaDto>>> GetUnidades()
     {
         var unidades = await _context.UnidadesMedida
@@ -51,6 +53,7 @@ public class UnidadesController : ControllerBase
     }
 
     [HttpPost]
+    [RequierePermiso("UNIDADES", AccionPermiso.Insertar)]
     public async Task<IActionResult> CrearUnidad([FromBody] GuardarUnidadMedidaDto dto)
     {
         var codigo = dto.CodigoMedida?.Trim().ToUpper() ?? string.Empty;
@@ -108,6 +111,7 @@ public class UnidadesController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequierePermiso("UNIDADES", AccionPermiso.Modificar)]
     public async Task<IActionResult> EditarUnidad(int id, [FromBody] GuardarUnidadMedidaDto dto)
     {
         var unidad = await _context.UnidadesMedida.FindAsync(id);
@@ -158,9 +162,10 @@ public class UnidadesController : ControllerBase
         }
     }
 
-    // Endpoins Conversiones
+    // Endpoins Conversiones (mismo módulo UNIDADES)
 
     [HttpGet("conversiones")]
+    [RequierePermiso("UNIDADES", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<UnidadConversionListDto>>> GetConversiones()
     {
         var conversiones = await _context.UnidadConversiones
@@ -183,6 +188,7 @@ public class UnidadesController : ControllerBase
     }
 
     [HttpPost("conversiones")]
+    [RequierePermiso("UNIDADES", AccionPermiso.Insertar)]
     public async Task<IActionResult> GuardarConversion([FromBody] GuardarConversionDto dto)
     {
         if (dto.IdUnidadOrigen == dto.IdUnidadDestino)
@@ -267,6 +273,7 @@ public class UnidadesController : ControllerBase
     }
 
     [HttpDelete("conversiones/{origenId}/{destinoId}")]
+    [RequierePermiso("UNIDADES", AccionPermiso.Eliminar)]
     public async Task<IActionResult> EliminarConversion(int origenId, int destinoId)
     {
         var conv = await _context.UnidadConversiones

@@ -6,6 +6,7 @@ using MaquilaBackend.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using MaquilaBackend.Security;
 using System.Security.Claims;
 
 namespace MaquilaBackend.Controllers;
@@ -22,7 +23,7 @@ public class AlmacenesController : ControllerBase
         _context = context;
     }
 
-        private int ObtenerUsuarioIdSesion()
+    private int ObtenerUsuarioIdSesion()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(claim) || !int.TryParse(claim, out int userId))
@@ -31,6 +32,7 @@ public class AlmacenesController : ControllerBase
     }
 
     [HttpGet]
+    [RequierePermiso("ALMACENES", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<AlmacenListDto>>> GetAlmacenes()
     {
         var almacenes = await _context.Almacenes
@@ -49,6 +51,7 @@ public class AlmacenesController : ControllerBase
     }
 
     [HttpGet("{id}/inventario")]
+    [RequierePermiso("ALMACENES", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<AlmacenStockDetalleDto>>> GetInventarioPorAlmacen(int id)
     {
         var inventario = await _context.Existencias
@@ -70,6 +73,7 @@ public class AlmacenesController : ControllerBase
     }
 
     [HttpPost]
+    [RequierePermiso("ALMACENES", AccionPermiso.Insertar)]
     public async Task<IActionResult> CrearAlmacen([FromBody] GuardarAlmacenDto dto)
     {
         var nombreLimpio = dto.NombreAlmacen?.Trim() ?? string.Empty;
@@ -119,6 +123,7 @@ public class AlmacenesController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequierePermiso("ALMACENES", AccionPermiso.Modificar)]
     public async Task<IActionResult> EditarAlmacen(int id, [FromBody] GuardarAlmacenDto dto)
     {
         var almacen = await _context.Almacenes.FindAsync(id);
@@ -165,6 +170,7 @@ public class AlmacenesController : ControllerBase
     }
 
     [HttpPatch("{id}/toggle-estado")]
+    [RequierePermiso("ALMACENES", AccionPermiso.Eliminar)]
     public async Task<IActionResult> ToggleEstado(int id)
     {
         var almacen = await _context.Almacenes
@@ -173,7 +179,7 @@ public class AlmacenesController : ControllerBase
 
         if (almacen == null) return NotFound(new { message = "Almacén no encontrado." });
 
-        // Regla de Integridad Física: No desactivar bodega con existencias positivas
+        // Regla de Integridad. No desactiva bodega con existencias positivas
         if (almacen.EstadoAlmacen && almacen.Existencias.Any(e => e.StockActual > 0))
         {
             return BadRequest(new { 

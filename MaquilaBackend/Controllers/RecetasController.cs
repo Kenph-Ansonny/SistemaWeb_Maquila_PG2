@@ -1,13 +1,13 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MaquilaBackend.Data;
 using MaquilaBackend.DTOs;
 using MaquilaBackend.Models;
-using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-
+using Microsoft.AspNetCore.Authorization;
+using MaquilaBackend.Security;
+using System.Security.Claims;
 
 namespace MaquilaBackend.Controllers;
 
@@ -35,6 +35,7 @@ public class RecetasController : ControllerBase
     }
 
     [HttpGet]
+    [RequierePermiso("RECETAS", AccionPermiso.Consultar)]
     public async Task<IActionResult> GetRecetas()
     {
         var recetas = await _context.Recetas
@@ -62,6 +63,7 @@ public class RecetasController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [RequierePermiso("RECETAS", AccionPermiso.Consultar)]
     public async Task<IActionResult> GetRecetaPorId(int id)
     {
         var r = await _context.Recetas
@@ -110,6 +112,7 @@ public class RecetasController : ControllerBase
     }
 
     [HttpPost]
+    [RequierePermiso("RECETAS", AccionPermiso.Insertar)]
     public async Task<IActionResult> CrearReceta([FromBody] GuardarRecetaDto dto)
     {
         var nombre = dto.NombreReceta?.Trim() ?? string.Empty;
@@ -183,6 +186,7 @@ public class RecetasController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequierePermiso("RECETAS", AccionPermiso.Modificar)]
     public async Task<IActionResult> EditarReceta(int id, [FromBody] GuardarRecetaDto dto)
     {
         var receta = await _context.Recetas
@@ -261,6 +265,7 @@ public class RecetasController : ControllerBase
     }
 
     [HttpPatch("{id}/toggle-estado")]
+    [RequierePermiso("RECETAS", AccionPermiso.Eliminar)]
     public async Task<IActionResult> ToggleEstado(int id)
     {
         var receta = await _context.Recetas.FindAsync(id);

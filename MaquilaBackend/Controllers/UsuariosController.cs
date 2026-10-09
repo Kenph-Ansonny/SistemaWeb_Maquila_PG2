@@ -6,6 +6,7 @@ using MaquilaBackend.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using MaquilaBackend.Security;
 using System.Security.Claims;
 
 namespace MaquilaBackend.Controllers;
@@ -31,6 +32,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpGet]
+    [RequierePermiso("USUARIOS", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<UsuarioListDto>>> GetUsuarios()
     {
         var usuarios = await _context.Usuarios
@@ -54,6 +56,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpPost]
+    [RequierePermiso("USUARIOS", AccionPermiso.Insertar)]
     public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioDto dto)
     {
         var usuarioLimpio = dto.NombreUsuario?.Trim() ?? string.Empty;
@@ -67,7 +70,7 @@ public class UsuariosController : ControllerBase
             return BadRequest(new { message = "El formato de correo electrónico no es válido." });
 
         // Validación de Contraseña Compleja: Mínimo 8, 1 mayúscula, 1 minúscula, 1 número, 1 símbolo
-        if (string.IsNullOrWhiteSpace(dto.Password) || 
+        if (string.IsNullOrWhiteSpace(dto.Password) ||
             !Regex.IsMatch(dto.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$"))
         {
             return BadRequest(new { message = "La contraseña debe tener mínimo 8 caracteres, incluir mayúscula, minúscula, número y un carácter especial (@$!%*#?&)." });
@@ -127,6 +130,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [RequierePermiso("USUARIOS", AccionPermiso.Modificar)]
     public async Task<IActionResult> EditarUsuario(int id, [FromBody] EditarUsuarioDto dto)
     {
         var usuario = await _context.Usuarios
@@ -204,6 +208,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpPatch("{id}/toggle-estado")]
+    [RequierePermiso("USUARIOS", AccionPermiso.Eliminar)]
     public async Task<IActionResult> ToggleEstado(int id)
     {
         var usuario = await _context.Usuarios.FindAsync(id);
@@ -233,9 +238,9 @@ public class UsuariosController : ControllerBase
             TablaAfectada = "Usuarios",
             IdRegistro = id.ToString(),
             ValoresAnteriores = JsonSerializer.Serialize(new { EstadoUsuario = !usuario.EstadoUsuario }),
-            ValoresNuevos = JsonSerializer.Serialize(new { 
-                EstadoUsuario = usuario.EstadoUsuario, 
-                FechaBloqueo = usuario.FechaBloqueo 
+            ValoresNuevos = JsonSerializer.Serialize(new {
+                EstadoUsuario = usuario.EstadoUsuario,
+                FechaBloqueo = usuario.FechaBloqueo
             }),
             DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
             FechaRegistro = DateTime.UtcNow
@@ -247,6 +252,7 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpGet("roles-disponibles")]
+    [RequierePermiso("USUARIOS", AccionPermiso.Consultar)]
     public async Task<IActionResult> GetRolesDisponibles()
     {
         var roles = await _context.Roles
