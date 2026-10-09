@@ -22,6 +22,9 @@ public class Rol
     [Column("estado_rol")]
     public bool EstadoRol { get; set; } = true;
 
+    [Column("es_super_admin")]
+    public bool EsSuperAdmin { get; set; } = false;
+
     public ICollection<UsuarioRol> UsuarioRoles { get; set; } = new List<UsuarioRol>();
     public ICollection<PermisoRol> PermisosRol { get; set; } = new List<PermisoRol>();
 }

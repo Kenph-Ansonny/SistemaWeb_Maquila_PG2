@@ -156,13 +156,13 @@ const handleLogout = () => {
     <div 
       v-if="isOpen" 
       @click="emit('close')"
-      class="fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm xl:hidden transition-opacity duration-300"
+      class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm xl:hidden transition-opacity duration-300"
     ></div>
 
     <!-- Contenedor del Sidebar -->
     <aside 
       :class="[
-        'fixed inset-y-0 left-0 z-50 my-4 ml-4 bg-white shadow-2xl rounded-2xl flex flex-col border border-slate-100 transition-all duration-300 ease-in-out',
+        'fixed inset-y-0 left-0 z-50 my-4 ml-4 bg-white shadow-xl shadow-slate-300/40 rounded-2xl flex flex-col border border-slate-100 transition-all duration-300 ease-in-out',
         isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0',
         isCollapsed ? 'xl:w-20 w-64' : 'w-64'
       ]"
@@ -173,21 +173,22 @@ const handleLogout = () => {
         :class="isCollapsed ? 'justify-center' : 'justify-between px-5'"
       >
         <div class="flex items-center">
-          <div class="h-10 w-10 min-w-[2.5rem] rounded-xl bg-gradient-to-tl from-purple-700 to-pink-500 flex items-center justify-center text-white shadow-md font-extrabold text-lg tracking-wider flex-shrink-0">
+          <div class="h-10 w-10 min-w-[2.5rem] rounded-xl bg-gradient-to-tl from-purple-700 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/30 font-extrabold text-lg tracking-wider flex-shrink-0">
             M
           </div>
           
           <div v-if="!isCollapsed" class="ml-3 flex flex-col truncate">
             <span class="font-black text-slate-800 tracking-tight text-sm uppercase leading-tight">Soft UI Maquila</span>
-            <span class="text-[10px] font-semibold text-purple-600 tracking-wide uppercase">Panel Textil</span>
+            <span class="text-[11px] font-semibold text-purple-600 tracking-wide">Panel textil</span>
           </div>
         </div>
 
         <!-- Botón para colapsar en Desktop -->
         <button 
           @click="toggleCollapse"
-          class="hidden xl:flex text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+          class="hidden xl:flex text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-500/25"
           :title="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
+          :aria-label="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
         >
           <svg 
             class="w-5 h-5 transition-transform duration-300" 
@@ -201,7 +202,7 @@ const handleLogout = () => {
         </button>
 
         <!-- Botón para cerrar en Móvil -->
-        <button @click="emit('close')" class="xl:hidden text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+        <button @click="emit('close')" class="xl:hidden text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors" aria-label="Cerrar menú">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -211,7 +212,7 @@ const handleLogout = () => {
       <!-- Menús y Acordeones Dinámicos -->
       <div class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-2 scrollbar-thin">
         <p 
-          class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2 text-center xl:text-left px-2"
+          class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center xl:text-left px-2"
         >
           {{ isCollapsed ? 'Menú' : 'Menú Principal' }}
         </p>
@@ -221,22 +222,22 @@ const handleLogout = () => {
           <button
             @click="toggleModule(module)"
             :class="[
-              'w-full flex items-center rounded-xl text-xs transition-all duration-200',
+              'w-full flex items-center rounded-xl text-[13px] transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-500/25',
               isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3.5 py-2.5 border-l-4',
               isModuleActive(module)
                 ? (isCollapsed 
                     ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-md shadow-purple-500/30' 
-                    : 'bg-slate-50/90 text-slate-900 font-bold border-purple-600 shadow-xs')
+                    : 'bg-purple-50/70 text-slate-900 font-bold border-purple-600')
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent font-semibold'
             ]"
           >
             <div class="flex items-center">
               <div :class="[
-                'w-7 h-7 rounded-lg flex items-center justify-center transition-all',
+                'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
                 !isCollapsed ? 'mr-2.5' : '',
                 isModuleActive(module) && !isCollapsed
-                  ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-purple-200 shadow-xs' 
-                  : (isCollapsed && isModuleActive(module) ? 'text-white' : 'bg-slate-100 text-slate-600')
+                  ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-md shadow-purple-500/30' 
+                  : (isCollapsed && isModuleActive(module) ? 'text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-purple-50 group-hover:text-purple-600')
               ]">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="module.icon" />
@@ -266,9 +267,9 @@ const handleLogout = () => {
           <!-- Floating Tooltip en Modo Colapsado -->
           <div 
             v-if="isCollapsed" 
-            class="absolute left-full top-0 ml-3 hidden group-hover:flex flex-col bg-slate-900 text-white text-xs rounded-xl py-2 px-3 shadow-xl z-50 min-w-[160px] pointer-events-none group-hover:pointer-events-auto transition-all duration-200 opacity-0 group-hover:opacity-100"
+            class="absolute left-full top-0 ml-3 hidden group-hover:flex flex-col bg-slate-900 text-white text-xs rounded-xl py-2.5 px-3.5 shadow-xl z-50 min-w-[170px] pointer-events-none group-hover:pointer-events-auto transition-all duration-200 opacity-0 group-hover:opacity-100"
           >
-            <span class="font-bold border-b border-slate-700 pb-1 mb-1 text-purple-300">{{ module.name }}</span>
+            <span class="font-bold border-b border-slate-700 pb-1.5 mb-1 text-purple-300">{{ module.name }}</span>
             <template v-if="module.subItems.length > 0">
               <button
                 v-for="sub in module.subItems"
@@ -292,9 +293,9 @@ const handleLogout = () => {
                 :key="sub.id"
                 @click="navigateTo(sub.path)"
                 :class="[
-                  'w-full text-left px-3.5 py-2 rounded-xl text-xs transition-all duration-200 flex items-center justify-between',
+                  'w-full text-left px-3.5 py-2 rounded-xl text-[13px] transition-all duration-200 flex items-center justify-between focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-500/25',
                   route.path === sub.path 
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold shadow-md shadow-purple-500/25 translate-x-1' 
+                    ? 'bg-purple-100/70 text-purple-800 font-bold ring-1 ring-purple-200/70' 
                     : 'text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-100/70'
                 ]"
               >
@@ -302,7 +303,7 @@ const handleLogout = () => {
                   <span 
                     :class="[
                       'w-1.5 h-1.5 rounded-full mr-2.5 transition-colors', 
-                      route.path === sub.path ? 'bg-white' : 'bg-slate-400'
+                      route.path === sub.path ? 'bg-purple-600' : 'bg-slate-300'
                     ]"
                   ></span>
                   <span class="truncate">{{ sub.name }}</span>
@@ -318,7 +319,7 @@ const handleLogout = () => {
         <button 
           @click="handleLogout" 
           :class="[
-            'w-full flex items-center justify-center py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-200 border border-transparent hover:border-rose-100',
+            'w-full flex items-center justify-center py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-200 border border-transparent hover:border-rose-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/20',
             isCollapsed ? 'px-0' : 'px-3'
           ]"
           :title="isCollapsed ? 'Cerrar Sesión' : ''"

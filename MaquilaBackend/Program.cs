@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using MaquilaBackend.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
+using MaquilaBackend.Security;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -58,6 +60,8 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermisoPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermisoHandler>();
 
 // Generador de Swagger con versión y título explícitos
 builder.Services.AddSwaggerGen(options =>

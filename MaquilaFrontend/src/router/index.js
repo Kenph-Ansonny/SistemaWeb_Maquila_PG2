@@ -34,7 +34,7 @@ const routes = [
 
   // Rutas de Producción
   { path: '/produccion/recetas', name: 'Recetas', component: () => import('../views/RecetasView.vue'), meta: { title: 'Fichas Técnicas (BOM)' } },
-  { path: '/produccion/ordenes', name: 'OrdenesProduccion', component: DashboardView, meta: { title: 'Órdenes de Producción' } },
+  { path: '/produccion/ordenes', name: 'OrdenesProduccion', component: () => import('../views/OrdenesProduccionView.vue'), meta: { title: 'Órdenes de Producción' } },
   { path: '/produccion/mermas', name: 'Mermas', component: DashboardView, meta: { title: 'Control de Mermas' } },
 
   // Rutas de Compras
@@ -42,9 +42,9 @@ const routes = [
   { path: '/compras/registro', name: 'RegistroCompras', component: DashboardView, meta: { title: 'Registro de Compras' } },
 
   // Rutas de Pedidos
-  { path: '/pedidos/clientes', name: 'Clientes', component: DashboardView, meta: { title: 'Catálogo de Clientes' } },
-  { path: '/pedidos/lista', name: 'PedidosLista', component: DashboardView, meta: { title: 'Pedidos de Maquila' } },
-
+  { path: '/pedidos/clientes', name: 'Clientes', component: () => import('../views/ClientesView.vue'), meta: { title: 'Catálogo de Clientes' } },
+  { path: '/pedidos/lista', name: 'PedidosLista', component: () => import('../views/PedidosView.vue'), meta: { title: 'Pedidos de Maquila' } },
+  
   // Rutas de Seguridad
   { path: '/seguridad/usuarios', name: 'Usuarios', component: () => import('../views/UsuariosView.vue'), meta: { title: 'Gestión de Usuarios' } },
   { path: '/seguridad/roles', name: 'RolesPermisos', component: () => import('../views/RolesView.vue'), meta: { title: 'Roles y Permisos' }},

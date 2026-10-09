@@ -6,6 +6,7 @@ using MaquilaBackend.Models;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
+using MaquilaBackend.Security;
 using System.Security.Claims;
 
 namespace MaquilaBackend.Controllers;
@@ -31,6 +32,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet]
+    [RequierePermiso("ROLES", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<RolListDto>>> GetRoles()
     {
         var roles = await _context.Roles
@@ -49,6 +51,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet("{idRol}/permisos")]
+    [RequierePermiso("ROLES", AccionPermiso.Consultar)]
     public async Task<ActionResult<IEnumerable<PermisoModuloItemDto>>> GetPermisosPorRol(int idRol)
     {
         var modulos = await _context.Modulos.AsNoTracking().ToListAsync();
@@ -74,6 +77,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpPost]
+    [RequierePermiso("ROLES", AccionPermiso.Insertar)]
     public async Task<IActionResult> CrearRol([FromBody] CrearRolDto dto)
     {
         var nombreLimpio = dto.NombreRol?.Trim() ?? string.Empty;
@@ -143,6 +147,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpPut("{idRol}")]
+    [RequierePermiso("ROLES", AccionPermiso.Modificar)]
     public async Task<IActionResult> EditarRol(int idRol, [FromBody] EditarRolDto dto)
     {
         var rol = await _context.Roles.FindAsync(idRol);
@@ -183,7 +188,10 @@ public class RolesController : ControllerBase
         return Ok(new { message = "Información del rol actualizada." });
     }
 
+    // Endpoint más sensible del módulo: decide qué puede hacer cada rol.
+    // Solo un rol con ROLES.Modificar (o EsSuperAdmin) puede tocarlo.
     [HttpPut("{idRol}/permisos")]
+    [RequierePermiso("ROLES", AccionPermiso.Modificar)]
     public async Task<IActionResult> GuardarPermisos(int idRol, [FromBody] List<PermisoModuloItemDto> permisosDto)
     {
         var rol = await _context.Roles.FindAsync(idRol);
@@ -236,6 +244,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpPatch("{idRol}/toggle-estado")]
+    [RequierePermiso("ROLES", AccionPermiso.Eliminar)]
     public async Task<IActionResult> ToggleEstado(int idRol)
     {
         if (idRol == 1)
