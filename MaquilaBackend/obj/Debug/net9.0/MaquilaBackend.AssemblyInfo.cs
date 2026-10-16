@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MaquilaBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+53206be798c9de14e9c83a38d5a3e82d9a9bcba8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f1ce6d68af18069a97bcb2d9e71c333b837ecccb")]
 [assembly: System.Reflection.AssemblyProductAttribute("MaquilaBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MaquilaBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

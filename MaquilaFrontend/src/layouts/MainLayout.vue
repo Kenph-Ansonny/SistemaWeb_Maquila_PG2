@@ -1,22 +1,17 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
 import Navbar from '../components/Navbar.vue'
-
-const route = useRoute()
 
 const isSidebarOpen = ref(false)
 const isSidebarCollapsed = ref(false)
 const userRole = ref(localStorage.getItem('user_role') || 'admin')
 const userName = ref(localStorage.getItem('user_name') || 'Admin Maquila')
-
-const currentRouteName = computed(() => route.meta.title || 'Dashboard')
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-50 flex">
-    <!-- Sidebar con binding bidireccional de colapso -->
+    <!-- Sidebar con control de colapso y apertura móvil -->
     <Sidebar 
       :userRole="userRole" 
       :isOpen="isSidebarOpen"
@@ -25,7 +20,7 @@ const currentRouteName = computed(() => route.meta.title || 'Dashboard')
     />
 
     <!-- Contenedor adaptativo:
-         - En móvil/tablet: ml-0 (sin margen fijo)
+         - En móvil/tablet: ml-0
          - En escritorio (xl): xl:ml-28 (colapsado) / xl:ml-72 (expandido) -->
     <div 
       :class="[
@@ -33,9 +28,10 @@ const currentRouteName = computed(() => route.meta.title || 'Dashboard')
         isSidebarCollapsed ? 'xl:ml-28' : 'xl:ml-72'
       ]"
     >
+      <!-- Navbar sin el prop de ruta/título redundante -->
       <Navbar 
-        :currentRoute="currentRouteName" 
-        :userName="userName" 
+        :userName="userName"
+        :userRole="userRole"
         @toggle-sidebar="isSidebarOpen = !isSidebarOpen"
       />
 

@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using MaquilaBackend.Security;
 using System.Security.Claims;
+using MaquilaBackend.Helpers;
 
 namespace MaquilaBackend.Controllers;
 
@@ -169,7 +170,7 @@ public class RecetasController : ControllerBase
                 IdRegistro = receta.IdReceta.ToString(),
                 ValoresAnteriores = null,
                 ValoresNuevos = JsonSerializer.Serialize(dto),
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);
@@ -247,7 +248,7 @@ public class RecetasController : ControllerBase
                 IdRegistro = id.ToString(),
                 ValoresAnteriores = JsonSerializer.Serialize(anterior),
                 ValoresNuevos = JsonSerializer.Serialize(dto),
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);
@@ -282,7 +283,7 @@ public class RecetasController : ControllerBase
             IdRegistro = id.ToString(),
             ValoresAnteriores = JsonSerializer.Serialize(new { EstadoReceta = !receta.EstadoReceta }),
             ValoresNuevos = JsonSerializer.Serialize(new { EstadoReceta = receta.EstadoReceta }),
-            DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+            DireccionIp = HttpContext.ObtenerIpCliente(),
             FechaRegistro = DateTime.UtcNow
         };
         _context.Bitacora.Add(log);

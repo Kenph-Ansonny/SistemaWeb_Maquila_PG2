@@ -10,13 +10,7 @@ const routes = [
     component: LoginView,
     meta: { title: 'Iniciar Sesión', public: true }
   },
-
-  {
-    path: '/reset-password',
-    name: 'ResetPassword',
-    component: () => import('../views/ResetPasswordView.vue'),
-    meta: { title: 'Restablecer Contraseña', public: true }
-  },
+  
   {
     path: '/dashboard',
     name: 'Dashboard',
@@ -30,16 +24,16 @@ const routes = [
   { path: '/inventario/articulos', name: 'Articulos', component: () => import('../views/ArticulosView.vue'), meta: { title: 'Catálogo de Artículos' } },
   { path: '/inventario/almacenes', name: 'Almacenes', component: () => import('../views/AlmacenesView.vue'), meta: { title: 'Almacenes y Bodegas' } },
   { path: '/inventario/unidades', name: 'Unidades', component: () => import('../views/UnidadesView.vue'), meta: { title: 'Unidades y Conversiones' } },
-  { path: '/inventario/kardex', name: 'Kardex', component: DashboardView, meta: { title: 'Kardex Transaccional' } },
+  { path: '/inventario/kardex', name: 'Kardex', component: () => import('../views/KardexView.vue'), meta: { title: 'Kardex Transaccional' } },
 
   // Rutas de Producción
   { path: '/produccion/recetas', name: 'Recetas', component: () => import('../views/RecetasView.vue'), meta: { title: 'Fichas Técnicas (BOM)' } },
   { path: '/produccion/ordenes', name: 'OrdenesProduccion', component: () => import('../views/OrdenesProduccionView.vue'), meta: { title: 'Órdenes de Producción' } },
-  { path: '/produccion/mermas', name: 'Mermas', component: DashboardView, meta: { title: 'Control de Mermas' } },
+  { path: '/produccion/mermas', name: 'Mermas', component: () => import('../views/MermasView.vue'), meta: { title: 'Control de Mermas' } },
 
   // Rutas de Compras
-  { path: '/compras/proveedores', name: 'Proveedores', component: DashboardView, meta: { title: 'Catálogo de Proveedores' } },
-  { path: '/compras/registro', name: 'RegistroCompras', component: DashboardView, meta: { title: 'Registro de Compras' } },
+  { path: '/compras/proveedores', name: 'Proveedores', component: () => import('../views/ProveedoresView.vue'), meta: { title: 'Catálogo de Proveedores' } },
+  { path: '/compras/registro', name: 'RegistroCompras', component: () => import('../views/RegistroComprasView.vue'), meta: { title: 'Registro de Compras' } },
 
   // Rutas de Pedidos
   { path: '/pedidos/clientes', name: 'Clientes', component: () => import('../views/ClientesView.vue'), meta: { title: 'Catálogo de Clientes' } },

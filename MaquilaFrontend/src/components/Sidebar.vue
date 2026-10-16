@@ -38,7 +38,7 @@ const allModules = [
     name: 'Dashboard',
     icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
     path: '/dashboard',
-    moduleCode: null,
+    moduleCode: 'DASHBOARD',
     subItems: []
   },
   {
@@ -99,7 +99,7 @@ const visibleModules = computed(() => {
       const allowedSubItems = module.subItems.filter(sub => can(sub.moduleCode, 'consultar'))
       return { ...module, subItems: allowedSubItems }
     })
-    .filter(module => module.subItems.length > 0 || module.path === '/dashboard')
+    .filter(module => module.subItems.length > 0 || (module.path === '/dashboard' && can('DASHBOARD', 'consultar')))
 })
 
 watch(
@@ -167,37 +167,53 @@ const handleLogout = () => {
         isCollapsed ? 'xl:w-20 w-64' : 'w-64'
       ]"
     >
-      <!-- Encabezado / Logo -->
+      <!-- Encabezado / Logo Centrado con precisión -->
       <div 
-        class="h-20 flex items-center border-b border-slate-100 flex-shrink-0 px-3"
-        :class="isCollapsed ? 'justify-center' : 'justify-between px-5'"
+        :class="[
+          'h-20 flex items-center border-b border-slate-100 flex-shrink-0 relative transition-all duration-300',
+          isCollapsed ? 'justify-center px-0' : 'justify-between px-5'
+        ]"
       >
-        <div class="flex items-center">
-          <div class="h-10 w-10 min-w-[2.5rem] rounded-xl bg-gradient-to-tl from-purple-700 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/30 font-extrabold text-lg tracking-wider flex-shrink-0">
+        <div 
+          @click="isCollapsed ? toggleCollapse() : null"
+          :class="[
+            'flex items-center transition-all duration-300 select-none',
+            isCollapsed ? 'justify-center cursor-pointer group' : ''
+          ]"
+          :title="isCollapsed ? 'Clic para expandir menú' : ''"
+        >
+          <!-- Contenedor del Logo M: Exactamente 40x40px centrado -->
+          <div class="h-10 w-10 min-w-[2.5rem] rounded-xl bg-gradient-to-tl from-purple-700 to-pink-500 flex items-center justify-center text-white shadow-md shadow-purple-500/25 font-black text-lg tracking-wider flex-shrink-0 transition-transform group-hover:scale-105">
             M
           </div>
           
           <div v-if="!isCollapsed" class="ml-3 flex flex-col truncate">
-            <span class="font-black text-slate-800 tracking-tight text-sm uppercase leading-tight">Soft UI Maquila</span>
+            <span class="font-black text-slate-900 tracking-tight text-sm uppercase leading-tight">Maquila Cassual's</span>
             <span class="text-[11px] font-semibold text-purple-600 tracking-wide">Panel textil</span>
           </div>
         </div>
 
-        <!-- Botón para colapsar en Desktop -->
+        <!-- Botón para Colapsar/Expandir en Desktop -->
+        <!-- Expandido: botón sutil en cabecera derecha. Colapsado: pestaña circular flotante en el borde -->
         <button 
           @click="toggleCollapse"
-          class="hidden xl:flex text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-500/25"
+          :class="[
+            'hidden xl:flex items-center justify-center transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/30',
+            isCollapsed 
+              ? 'absolute -right-3 top-7 w-6 h-6 bg-white border border-slate-200/90 shadow-md shadow-slate-300/50 rounded-full text-slate-500 hover:text-purple-600 hover:scale-110 z-20' 
+              : 'text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100'
+          ]"
           :title="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
           :aria-label="isCollapsed ? 'Expandir menú' : 'Colapsar menú'"
         >
           <svg 
-            class="w-5 h-5 transition-transform duration-300" 
+            class="w-3.5 h-3.5 transition-transform duration-300" 
             :class="{ 'rotate-180': isCollapsed }"
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
           </svg>
         </button>
 
@@ -210,9 +226,17 @@ const handleLogout = () => {
       </div>
 
       <!-- Menús y Acordeones Dinámicos -->
-      <div class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-2 scrollbar-thin">
+      <div 
+        :class="[
+          'flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-2 scrollbar-thin transition-all',
+          isCollapsed ? 'px-2' : 'px-3'
+        ]"
+      >
         <p 
-          class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 text-center xl:text-left px-2"
+          :class="[
+            'text-[10px] font-black uppercase tracking-wider mb-2 transition-all',
+            isCollapsed ? 'text-center text-slate-400' : 'text-left text-slate-400 px-3'
+          ]"
         >
           {{ isCollapsed ? 'Menú' : 'Menú Principal' }}
         </p>
@@ -222,38 +246,39 @@ const handleLogout = () => {
           <button
             @click="toggleModule(module)"
             :class="[
-              'w-full flex items-center rounded-xl text-[13px] transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-500/25',
-              isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3.5 py-2.5 border-l-4',
-              isModuleActive(module)
-                ? (isCollapsed 
-                    ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-md shadow-purple-500/30' 
-                    : 'bg-purple-50/70 text-slate-900 font-bold border-purple-600')
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent font-semibold'
+              'w-full flex items-center transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/25',
+              isCollapsed 
+                ? 'justify-center py-1.5 px-0' 
+                : 'justify-between px-3 py-2.5 rounded-xl border-l-4 text-[13px]',
+              !isCollapsed && isModuleActive(module)
+                ? 'bg-purple-50/70 text-slate-900 font-bold border-purple-600'
+                : (!isCollapsed ? 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent font-semibold' : '')
             ]"
           >
-            <div class="flex items-center">
-              <div :class="[
-                'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
-                !isCollapsed ? 'mr-2.5' : '',
-                isModuleActive(module) && !isCollapsed
-                  ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-md shadow-purple-500/30' 
-                  : (isCollapsed && isModuleActive(module) ? 'text-white' : 'bg-slate-100 text-slate-600 group-hover:bg-purple-50 group-hover:text-purple-600')
-              ]">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="module.icon" />
-                </svg>
-              </div>
-
-              <span v-if="!isCollapsed" class="truncate">
-                {{ module.name }}
-              </span>
+            <!-- Wrapper del Ícono (40x40px idéntico al logo superior) -->
+            <div 
+              :class="[
+                'w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0',
+                isModuleActive(module)
+                  ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-md shadow-purple-500/30'
+                  : 'bg-slate-50 text-slate-500 group-hover:bg-purple-50 group-hover:text-purple-700 border border-slate-100 group-hover:border-purple-200'
+              ]"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="module.icon" />
+              </svg>
             </div>
 
-            <!-- Indicador Flecha -->
+            <!-- Etiqueta de texto (solo cuando está expandido) -->
+            <span v-if="!isCollapsed" class="truncate flex-1 text-left ml-3">
+              {{ module.name }}
+            </span>
+
+            <!-- Indicador Flecha de Acordeón -->
             <svg 
               v-if="module.subItems.length > 0 && !isCollapsed"
               :class="[
-                'w-3.5 h-3.5 transition-transform duration-300',
+                'w-3.5 h-3.5 transition-transform duration-300 ml-1',
                 expandedModule === module.id ? 'rotate-180 text-purple-600 font-bold' : 'text-slate-400'
               ]"
               fill="none" 
@@ -264,25 +289,37 @@ const handleLogout = () => {
             </svg>
           </button>
 
-          <!-- Floating Tooltip en Modo Colapsado -->
+          <!-- Floating Tooltip en Modo Colapsado con Flecha Centrada -->
           <div 
             v-if="isCollapsed" 
-            class="absolute left-full top-0 ml-3 hidden group-hover:flex flex-col bg-slate-900 text-white text-xs rounded-xl py-2.5 px-3.5 shadow-xl z-50 min-w-[170px] pointer-events-none group-hover:pointer-events-auto transition-all duration-200 opacity-0 group-hover:opacity-100"
+            class="absolute left-full top-1/2 -translate-y-1/2 ml-3.5 hidden group-hover:flex flex-col bg-slate-900 text-white text-xs rounded-2xl py-3 px-4 shadow-2xl z-50 min-w-[190px] pointer-events-none group-hover:pointer-events-auto transition-all duration-200 opacity-0 group-hover:opacity-100"
           >
-            <span class="font-bold border-b border-slate-700 pb-1.5 mb-1 text-purple-300">{{ module.name }}</span>
+            <!-- Triángulo indicador hacia el botón -->
+            <span class="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900"></span>
+
+            <span class="font-black border-b border-slate-800 pb-1.5 mb-1.5 text-purple-300 tracking-wide text-xs">
+              {{ module.name }}
+            </span>
             <template v-if="module.subItems.length > 0">
               <button
                 v-for="sub in module.subItems"
                 :key="sub.id"
                 @click="navigateTo(sub.path)"
-                class="text-left py-1 text-slate-300 hover:text-white hover:pl-1 transition-all"
+                :class="[
+                  'text-left py-1.5 text-[11px] font-semibold transition-all flex items-center gap-1.5',
+                  route.path === sub.path ? 'text-pink-400 font-bold' : 'text-slate-300 hover:text-white hover:pl-1'
+                ]"
               >
-                {{ sub.name }}
+                <span class="w-1.5 h-1.5 rounded-full" :class="route.path === sub.path ? 'bg-pink-400' : 'bg-slate-600'"></span>
+                <span>{{ sub.name }}</span>
               </button>
+            </template>
+            <template v-else>
+              <span class="text-[10px] text-slate-400">Clic para abrir vista principal</span>
             </template>
           </div>
 
-          <!-- Animación Acordeón para Submenús -->
+          <!-- Animación Acordeón para Submenús Expandidos -->
           <Transition name="accordion">
             <div 
               v-if="module.subItems.length > 0 && expandedModule === module.id && !isCollapsed"
@@ -293,7 +330,7 @@ const handleLogout = () => {
                 :key="sub.id"
                 @click="navigateTo(sub.path)"
                 :class="[
-                  'w-full text-left px-3.5 py-2 rounded-xl text-[13px] transition-all duration-200 flex items-center justify-between focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-500/25',
+                  'w-full text-left px-3.5 py-2 rounded-xl text-[13px] transition-all duration-200 flex items-center justify-between focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/25',
                   route.path === sub.path 
                     ? 'bg-purple-100/70 text-purple-800 font-bold ring-1 ring-purple-200/70' 
                     : 'text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-100/70'
@@ -314,13 +351,20 @@ const handleLogout = () => {
         </div>
       </div>
 
-      <!-- Footer / Cierre de Sesión -->
-      <div class="p-3 border-t border-slate-100 flex-shrink-0">
+      <!-- Footer / Cierre de Sesión Centrado -->
+      <div 
+        :class="[
+          'p-3 border-t border-slate-100 flex-shrink-0 flex items-center',
+          isCollapsed ? 'justify-center' : 'justify-start'
+        ]"
+      >
         <button 
           @click="handleLogout" 
           :class="[
-            'w-full flex items-center justify-center py-2.5 text-[13px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-200 border border-transparent hover:border-rose-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/20',
-            isCollapsed ? 'px-0' : 'px-3'
+            'flex items-center justify-center text-[13px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-200 border border-transparent hover:border-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/20',
+            isCollapsed 
+              ? 'w-10 h-10 p-0 shadow-2xs hover:scale-105' 
+              : 'w-full py-2.5 px-3'
           ]"
           :title="isCollapsed ? 'Cerrar Sesión' : ''"
         >

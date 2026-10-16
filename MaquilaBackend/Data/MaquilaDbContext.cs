@@ -23,6 +23,9 @@ public class MaquilaDbContext : DbContext
     public DbSet<Existencia> Existencias => Set<Existencia>();
     public DbSet<ProductoTerminadoDetalle> ProductoTerminadoDetalles => Set<ProductoTerminadoDetalle>();
 
+    //Modulo de Merma
+    public DbSet<RegistroMerma> RegistroMermas => Set<RegistroMerma>();
+
     //Modulo de Produccion
     public DbSet<Receta> Recetas => Set<Receta>();
     public DbSet<RecetaDetalle> RecetaDetalles => Set<RecetaDetalle>();
@@ -32,6 +35,17 @@ public class MaquilaDbContext : DbContext
     public DbSet<Pedido> Pedidos { get; set; }
     public DbSet<PedidoDetalle> PedidoDetalles { get; set; }
     public DbSet<OrdenProduccion> OrdenesProduccion { get; set; }
+
+    //Kardex
+    public DbSet<KardexMovimiento> KardexMovimientos => Set<KardexMovimiento>();
+
+    //Proveedores
+    public DbSet<Proveedor> Proveedores => Set<Proveedor>();
+
+    //Compras
+    public DbSet<Compra> Compras => Set<Compra>();
+    public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
+    
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,5 +164,105 @@ public class MaquilaDbContext : DbContext
             .WithMany()
             .HasForeignKey(pd => pd.IdReceta)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Mermas
+        modelBuilder.Entity<RegistroMerma>()
+            .ToTable("Registro_Mermas")
+            .HasKey(m => m.IdMerma);
+
+        modelBuilder.Entity<RegistroMerma>()
+            .HasOne(m => m.OrdenProduccion)
+            .WithMany()
+            .HasForeignKey(m => m.IdOrdenProduccion)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RegistroMerma>()
+            .HasOne(m => m.ArticuloInsumo)
+            .WithMany()
+            .HasForeignKey(m => m.IdArticuloInsumo)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RegistroMerma>()
+            .HasOne(m => m.AlmacenDestino)
+            .WithMany()
+            .HasForeignKey(m => m.IdAlmacenDestino)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        //Kardex
+        modelBuilder.Entity<KardexMovimiento>()
+            .ToTable("Kardex_Movimientos")
+            .HasKey(k => k.IdKardex);
+
+        modelBuilder.Entity<KardexMovimiento>()
+            .HasOne(k => k.Articulo)
+            .WithMany()
+            .HasForeignKey(k => k.IdArticulo)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<KardexMovimiento>()
+            .HasOne(k => k.Almacen)
+            .WithMany()
+            .HasForeignKey(k => k.IdAlmacen)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<KardexMovimiento>()
+            .HasOne(k => k.Usuario)
+            .WithMany()
+            .HasForeignKey(k => k.IdUsuario)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        //Proveedor
+        modelBuilder.Entity<Proveedor>()
+            .ToTable("Proveedores")
+            .HasKey(p => p.IdProveedor);
+        
+        //Compras
+        modelBuilder.Entity<Compra>(entity =>
+        {
+            entity.ToTable("Compras");
+            entity.HasKey(c => c.IdCompra);
+
+            // Restricción única (id_proveedor, numero_documento)
+            entity.HasIndex(c => new { c.IdProveedor, c.NumeroDocumento })
+                .IsUnique()
+                .HasDatabaseName("uq_compra_documento");
+
+            entity.HasOne(c => c.Proveedor)
+                .WithMany()
+                .HasForeignKey(c => c.IdProveedor)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(c => c.Usuario)
+                .WithMany()
+                .HasForeignKey(c => c.IdUsuario)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CompraDetalle>(entity =>
+        {
+            entity.ToTable("CompraDetalles");
+            entity.HasKey(d => d.IdDetalle);
+
+            entity.HasOne(d => d.Compra)
+                .WithMany(c => c.Detalles)
+                .HasForeignKey(d => d.IdCompra)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Articulo)
+                .WithMany()
+                .HasForeignKey(d => d.IdArticulo)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.UnidadMedida)
+                .WithMany()
+                .HasForeignKey(d => d.IdUnidadMedida)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.AlmacenDestino)
+                .WithMany()
+                .HasForeignKey(d => d.IdAlmacenDestino)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
     }
 }

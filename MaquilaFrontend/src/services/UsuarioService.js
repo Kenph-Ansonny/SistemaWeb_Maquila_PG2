@@ -1,19 +1,51 @@
 import api from './api'
 
-export default {
-  obtenerTodos() {
-    return api.get('/usuarios')
+const BASE_URL = '/usuarios'
+
+export const usuarioService = {
+  /**
+   * Obtiene la lista completa de usuarios con roles y fechas de acceso.
+   */
+  async obtenerTodos() {
+    const { data } = await api.get(BASE_URL)
+    return data
   },
-  obtenerRoles() {
-    return api.get('/usuarios/roles-disponibles')
+
+  /**
+   * Obtiene el catálogo de roles activos disponibles para asignación.
+   */
+  async obtenerRoles() {
+    const { data } = await api.get(`${BASE_URL}/roles-disponibles`)
+    return data
   },
-  crear(usuario) {
-    return api.post('/usuarios', usuario)
+
+  /**
+   * Registra un nuevo usuario con contraseña hasheada y roles asignados.
+   * @param {{ nombreUsuario: string, correo: string, password: string, rolesIds: number[] }} usuario
+   */
+  async crear(usuario) {
+    const { data } = await api.post(BASE_URL, usuario)
+    return data
   },
-  actualizar(id, usuario) {
-    return api.put(`/usuarios/${id}`, usuario)
+
+  /**
+   * Actualiza la información, roles y opcionalmente la contraseña de un usuario.
+   * @param {number|string} id
+   * @param {{ nombreUsuario: string, correo: string, password?: string, rolesIds: number[] }} usuario
+   */
+  async actualizar(id, usuario) {
+    const { data } = await api.put(`${BASE_URL}/${id}`, usuario)
+    return data
   },
-  cambiarEstado(id) {
-    return api.patch(`/usuarios/${id}/toggle-estado`)
+
+  /**
+   * Alterna el estado activo o inactivo (y bloqueo) de una cuenta.
+   * @param {number|string} id
+   */
+  async cambiarEstado(id) {
+    const { data } = await api.patch(`${BASE_URL}/${id}/toggle-estado`)
+    return data
   }
 }
+
+export default usuarioService

@@ -72,3 +72,7 @@ public record GuardarPedidoDto(
 public record CambiarEstadoPedidoDto(
     string EstadoPedido
 );
+
+public record ActualizarFechaEntregaDto(
+    DateTime? FechaEstimadaEntrega
+);

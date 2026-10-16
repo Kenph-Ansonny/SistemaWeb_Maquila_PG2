@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using MaquilaBackend.Security;
 using System.Security.Claims;
+using MaquilaBackend.Helpers;
 
 namespace MaquilaBackend.Controllers;
 
@@ -94,7 +95,7 @@ public class UnidadesController : ControllerBase
                 IdRegistro = nuevaUnidad.IdUnidadMedida.ToString(),
                 ValoresAnteriores = null,
                 ValoresNuevos = JsonSerializer.Serialize(dto),
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);
@@ -146,7 +147,7 @@ public class UnidadesController : ControllerBase
                 IdRegistro = id.ToString(),
                 ValoresAnteriores = JsonSerializer.Serialize(anterior),
                 ValoresNuevos = JsonSerializer.Serialize(dto),
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);
@@ -255,7 +256,7 @@ public class UnidadesController : ControllerBase
                 IdRegistro = $"{dto.IdUnidadOrigen}->{dto.IdUnidadDestino}",
                 ValoresAnteriores = null,
                 ValoresNuevos = JsonSerializer.Serialize(new { dto.FactorConversion, FactorInverso = factorInverso }),
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);
@@ -297,7 +298,7 @@ public class UnidadesController : ControllerBase
             IdRegistro = $"{origenId}->{destinoId}",
             ValoresAnteriores = JsonSerializer.Serialize(new { conv.FactorConversion }),
             ValoresNuevos = null,
-            DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+            DireccionIp = HttpContext.ObtenerIpCliente(),
             FechaRegistro = DateTime.UtcNow
         };
         _context.Bitacora.Add(log);

@@ -26,6 +26,10 @@ const pedidoService = {
     return api.patch(`${BASE_URL}/${id}/estado`, { estadoPedido })
   },
 
+  actualizarFechaEntrega(id, fechaEstimadaEntrega) {
+    return api.patch(`${BASE_URL}/${id}/fecha-entrega`, { fechaEstimadaEntrega })
+  },
+
   eliminar(id) {
     return api.delete(`${BASE_URL}/${id}`)
   },
@@ -33,9 +37,6 @@ const pedidoService = {
   obtenerSiguienteNumero() {
     return api.get(`${BASE_URL}/siguiente-numero`)
   }
-
-  // El listado de clientes para el formulario vive en clienteService.obtenerOpciones()
-  // (GET /api/Clientes/opciones), no aquí — Pedidos ya no necesita su propio lookup.
 }
 
 export default pedidoService

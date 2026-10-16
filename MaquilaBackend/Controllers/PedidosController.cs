@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using MaquilaBackend.Security;
 using System.Security.Claims;
+using MaquilaBackend.Helpers;
 
 namespace MaquilaBackend.Controllers;
 
@@ -17,15 +18,15 @@ namespace MaquilaBackend.Controllers;
 public class PedidosController : ControllerBase
 {
     private readonly MaquilaDbContext _context;
-    private const int ID_MODULO_PEDIDOS = 7; 
+    private const int ID_MODULO_PEDIDOS = 7;
 
-    private static readonly string[] ESTADOS_VALIDOS = 
-    { 
-        "Registrado", 
-        "En Produccion", 
-        "Finalizado", 
-        "Entregado", 
-        "Cancelado" 
+    private static readonly string[] ESTADOS_VALIDOS =
+    {
+        "Registrado",
+        "En Produccion",
+        "Finalizado",
+        "Entregado",
+        "Cancelado"
     };
 
     private static readonly Dictionary<string, string[]> TRANSICIONES_VALIDAS = new()
@@ -74,8 +75,8 @@ public class PedidosController : ControllerBase
         if (!string.IsNullOrWhiteSpace(busqueda))
         {
             var term = busqueda.Trim().ToLower();
-            query = query.Where(p => 
-                p.NumeroPedido.ToLower().Contains(term) || 
+            query = query.Where(p =>
+                p.NumeroPedido.ToLower().Contains(term) ||
                 p.Cliente.NombreCliente.ToLower().Contains(term));
         }
 
@@ -181,14 +182,17 @@ public class PedidosController : ControllerBase
         if (dto.Detalles == null || !dto.Detalles.Any())
             return BadRequest(new { message = "El pedido debe contener al menos una prenda en su detalle." });
 
+        if (dto.FechaEstimadaEntrega.HasValue && dto.FechaEstimadaEntrega.Value.Date < DateTime.UtcNow.Date)
+            return BadRequest(new { message = "La fecha estimada de entrega no puede ser anterior a hoy." });
+
         //Validación de cada línea de detalle
         foreach (var (linea, index) in dto.Detalles.Select((item, idx) => (item, idx + 1)))
         {
             if (linea.Cantidad <= 0)
                 return BadRequest(new { message = $"Línea #{index}: La cantidad solicitada debe ser mayor a cero." });
 
-            if (linea.PrecioUnitarioAcordado < 0)
-                return BadRequest(new { message = $"Línea #{index}: El precio acordado no puede ser negativo." });
+            if (linea.PrecioUnitarioAcordado <= 0)
+                return BadRequest(new { message = $"Línea #{index}: El precio acordado debe ser mayor a cero (no se permite cero ni negativos)." });
 
             var prenda = await _context.Articulos.FindAsync(linea.IdArticuloPrenda);
             if (prenda == null || !prenda.EstadoArticulo || prenda.TipoArticulo != "PrendaTerminada")
@@ -240,7 +244,7 @@ public class PedidosController : ControllerBase
                 IdRegistro = nuevoPedido.IdPedido.ToString(),
                 ValoresAnteriores = null,
                 ValoresNuevos = JsonSerializer.Serialize(dto),
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);
@@ -270,7 +274,7 @@ public class PedidosController : ControllerBase
             return NotFound(new { message = "Pedido no encontrado." });
 
         if (pedido.EstadoPedido != "Registrado")
-            return BadRequest(new { message = $"No se puede modificar el pedido porque se encuentra en estado '{pedido.EstadoPedido}'." });
+            return BadRequest(new { message = $"No se puede modificar el pedido porque se encuentra en estado '{pedido.EstadoPedido}'. Si solo necesitas cambiar la fecha de entrega, usa PATCH /api/Pedidos/{id}/fecha-entrega." });
 
         if (pedido.Detalles.Any(d => d.OrdenesProduccion.Any()))
             return BadRequest(new { message = "No se puede modificar el pedido porque ya cuenta con órdenes de producción vinculadas." });
@@ -289,14 +293,18 @@ public class PedidosController : ControllerBase
         if (dto.Detalles == null || !dto.Detalles.Any())
             return BadRequest(new { message = "El pedido debe contener al menos una prenda." });
 
+        if (dto.FechaEstimadaEntrega.HasValue && dto.FechaEstimadaEntrega.Value.Date < DateTime.UtcNow.Date
+            && dto.FechaEstimadaEntrega != pedido.FechaEstimadaEntrega)
+            return BadRequest(new { message = "La fecha estimada de entrega no puede ser anterior a hoy." });
+
         // validaciones de ítems
         foreach (var (linea, index) in dto.Detalles.Select((item, idx) => (item, idx + 1)))
         {
             if (linea.Cantidad <= 0)
                 return BadRequest(new { message = $"Línea #{index}: La cantidad debe ser mayor a cero." });
 
-            if (linea.PrecioUnitarioAcordado < 0)
-                return BadRequest(new { message = $"Línea #{index}: El precio acordado no puede ser negativo." });
+            if (linea.PrecioUnitarioAcordado <= 0)
+                return BadRequest(new { message = $"Línea #{index}: El precio acordado debe ser mayor a cero (no se permite cero ni negativos)." });
 
             var prenda = await _context.Articulos.FindAsync(linea.IdArticuloPrenda);
             if (prenda == null || !prenda.EstadoArticulo || prenda.TipoArticulo != "PrendaTerminada")
@@ -322,7 +330,7 @@ public class PedidosController : ControllerBase
             pedido.IdCliente = dto.IdCliente;
             pedido.FechaEstimadaEntrega = dto.FechaEstimadaEntrega;
 
-            // reemplazar líneas del pedido (eliminación física de las anteriores)
+            // reemplazar líneas del pedido
             _context.PedidoDetalles.RemoveRange(pedido.Detalles);
 
             foreach (var item in dto.Detalles)
@@ -348,7 +356,7 @@ public class PedidosController : ControllerBase
                 IdRegistro = id.ToString(),
                 ValoresAnteriores = JsonSerializer.Serialize(valoresAnteriores),
                 ValoresNuevos = JsonSerializer.Serialize(dto),
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);
@@ -386,12 +394,14 @@ public class PedidosController : ControllerBase
             var opciones = permitidos != null && permitidos.Length > 0 ? string.Join(", ", permitidos) : "ninguna (estado final)";
             return BadRequest(new { message = $"No se puede pasar de '{pedido.EstadoPedido}' a '{nuevoEstado}'. Transiciones permitidas: {opciones}." });
         }
-        
+
+        // Ordenes de producción que esta cancelación va a arrastrar
+        var todasLasOrdenes = pedido.Detalles.SelectMany(d => d.OrdenesProduccion).ToList();
+
         // cambios de estado
         if (nuevoEstado == "Cancelado")
         {
-            var tieneOrdenesEnCurso = pedido.Detalles
-                .SelectMany(d => d.OrdenesProduccion)
+            var tieneOrdenesEnCurso = todasLasOrdenes
                 .Any(o => o.EstadoOrden != "Iniciada" && o.CantidadProducida > 0);
 
             if (tieneOrdenesEnCurso)
@@ -410,13 +420,76 @@ public class PedidosController : ControllerBase
             IdRegistro = id.ToString(),
             ValoresAnteriores = JsonSerializer.Serialize(new { EstadoPedido = estadoAnterior }),
             ValoresNuevos = JsonSerializer.Serialize(new { EstadoPedido = nuevoEstado }),
-            DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+            DireccionIp = HttpContext.ObtenerIpCliente(),
             FechaRegistro = DateTime.UtcNow
         };
         _context.Bitacora.Add(log);
+
+
+        if (nuevoEstado == "Cancelado")
+        {
+            var ordenesACancelar = todasLasOrdenes
+                .Where(o => o.EstadoOrden != "Terminada" && o.EstadoOrden != "Cancelada")
+                .ToList();
+
+            foreach (var orden in ordenesACancelar)
+            {
+                var estadoOrdenAnterior = orden.EstadoOrden;
+                orden.EstadoOrden = "Cancelada";
+
+                _context.Bitacora.Add(new Bitacora
+                {
+                    IdUsuario = ObtenerUsuarioIdSesion(),
+                    IdModulo = ID_MODULO_PEDIDOS,
+                    Accion = "CANCELAR_POR_PEDIDO",
+                    TablaAfectada = "Ordenes_Produccion",
+                    IdRegistro = orden.IdOrden.ToString(),
+                    ValoresAnteriores = JsonSerializer.Serialize(new { EstadoOrden = estadoOrdenAnterior }),
+                    ValoresNuevos = JsonSerializer.Serialize(new { EstadoOrden = "Cancelada" }),
+                    DireccionIp = HttpContext.ObtenerIpCliente(),
+                    FechaRegistro = DateTime.UtcNow
+                });
+            }
+        }
+
         await _context.SaveChangesAsync();
 
         return Ok(new { message = $"Estado del pedido actualizado a '{nuevoEstado}'." });
+    }
+
+    [HttpPatch("{id}/fecha-entrega")]
+    [RequierePermiso("PEDIDOS", AccionPermiso.Modificar)]
+    public async Task<IActionResult> ActualizarFechaEntrega(int id, [FromBody] ActualizarFechaEntregaDto dto)
+    {
+        var pedido = await _context.Pedidos.FirstOrDefaultAsync(p => p.IdPedido == id);
+        if (pedido == null)
+            return NotFound(new { message = "Pedido no encontrado." });
+
+        if (pedido.EstadoPedido == "Cancelado" || pedido.EstadoPedido == "Entregado")
+            return BadRequest(new { message = $"No se puede cambiar la fecha de entrega de un pedido en estado '{pedido.EstadoPedido}'." });
+
+        if (dto.FechaEstimadaEntrega.HasValue && dto.FechaEstimadaEntrega.Value.Date < DateTime.UtcNow.Date)
+            return BadRequest(new { message = "La fecha estimada de entrega no puede ser anterior a hoy." });
+
+        var anterior = pedido.FechaEstimadaEntrega;
+        pedido.FechaEstimadaEntrega = dto.FechaEstimadaEntrega;
+
+        _context.Bitacora.Add(new Bitacora
+        {
+            IdUsuario = ObtenerUsuarioIdSesion(),
+            IdModulo = ID_MODULO_PEDIDOS,
+            Accion = "UPDATE_FECHA_ENTREGA",
+            TablaAfectada = "Pedidos",
+            IdRegistro = id.ToString(),
+            ValoresAnteriores = JsonSerializer.Serialize(new { FechaEstimadaEntrega = anterior }),
+            ValoresNuevos = JsonSerializer.Serialize(new { FechaEstimadaEntrega = dto.FechaEstimadaEntrega }),
+            DireccionIp = HttpContext.ObtenerIpCliente(),
+            FechaRegistro = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Fecha de entrega actualizada." });
     }
 
     [HttpDelete("{id}")]
@@ -449,7 +522,7 @@ public class PedidosController : ControllerBase
                 IdRegistro = id.ToString(),
                 ValoresAnteriores = JsonSerializer.Serialize(new { pedido.NumeroPedido, pedido.IdCliente, pedido.EstadoPedido }),
                 ValoresNuevos = null,
-                DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                DireccionIp = HttpContext.ObtenerIpCliente(),
                 FechaRegistro = DateTime.UtcNow
             };
             _context.Bitacora.Add(log);

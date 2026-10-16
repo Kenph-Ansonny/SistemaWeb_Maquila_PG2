@@ -17,7 +17,7 @@ export const clienteService = {
   },
 
   /**
-   * Obtiene lista simplificada de clientes activos para comboboxes/selects.
+   * Obtiene lista simplificada de clientes activos
    */
   async obtenerOpciones() {
     const { data } = await api.get(`${BASE_URL}/opciones`)

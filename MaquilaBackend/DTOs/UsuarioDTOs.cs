@@ -35,7 +35,11 @@ public record PermisoModuloDto(
     bool PuedeEliminar
 );
 
-public record LoginRequestDto(string Identificador, string Password);
+public record LoginRequestDto(
+    string Identificador, 
+    string Password, 
+    bool Recordarme = false
+);
 
 public record LoginResponseDto(
     int IdUsuario,
@@ -44,4 +48,11 @@ public record LoginResponseDto(
     string RolPrincipal,
     List<PermisoModuloDto> Permisos,
     string Token
+);
+
+public record ForgotPasswordRequestDto(string Correo);
+
+public record ResetPasswordRequestDto(
+    string Token, 
+    string NuevaPassword
 );
