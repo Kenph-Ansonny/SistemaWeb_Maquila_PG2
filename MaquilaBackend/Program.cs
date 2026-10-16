@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using MaquilaBackend.Security;
+using MaquilaBackend.Services;
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,8 +34,6 @@ builder.Services.AddEndpointsApiExplorer();
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"];
 
-// Falla rápido y explícito si falta configurar la clave, en vez de arrancar
-// "seguro en apariencia" con un token que nadie firmó correctamente.
 if (string.IsNullOrWhiteSpace(jwtKey))
     throw new InvalidOperationException(
         "La clave JWT (Jwt:Key) no está configurada. Defínela con: " +
@@ -63,6 +63,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermisoPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermisoHandler>();
 
+// Inyección de Servicios de Inventario
+builder.Services.AddScoped<IKardexService, KardexService>();
+
 // Generador de Swagger con versión y título explícitos
 builder.Services.AddSwaggerGen(options =>
 {
@@ -73,7 +76,6 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API de Gestión y Seguridad del Sistema de Maquila"
     });
 
-    // Permite probar endpoints protegidos directamente desde Swagger UI
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -97,9 +99,14 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// Permite leer cabeceras de Nginx o Railway
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
 if (app.Environment.IsDevelopment())
 {
-    // Genera el swagger.json en la ruta estándar
     app.UseSwagger(c =>
     {
         c.RouteTemplate = "swagger/{documentName}/swagger.json";
@@ -114,8 +121,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowVueApp");
 
-// El orden importa: primero se autentica (¿quién eres?),
-// luego se autoriza (¿qué puedes hacer?).
 app.UseAuthentication();
 app.UseAuthorization();
 

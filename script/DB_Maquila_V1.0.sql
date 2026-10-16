@@ -29,7 +29,8 @@ CREATE TABLE Roles (
     id_rol INT AUTO_INCREMENT PRIMARY KEY,
     nombre_rol VARCHAR(50) NOT NULL UNIQUE,
     descripcion VARCHAR(200) NULL,
-    estado_rol TINYINT(1) NOT NULL DEFAULT 1
+    estado_rol TINYINT(1) NOT NULL DEFAULT 1,
+    es_super_admin BOOLEAN NOT NULL DEFAULT FALSE
 ) ENGINE=InnoDB;
 
 CREATE TABLE Modulos (
@@ -63,7 +64,7 @@ CREATE TABLE Bitacora (
     id_bitacora BIGINT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
     id_modulo INT NOT NULL,
-    accion VARCHAR(20) NOT NULL,
+    accion VARCHAR(50) NOT NULL,
     tabla_afectada VARCHAR(50) NOT NULL,
     id_registro VARCHAR(50) NOT NULL,
     valores_anteriores JSON NULL,
@@ -287,3 +288,32 @@ CREATE TABLE Kardex_Movimientos (
     FOREIGN KEY (id_almacen) REFERENCES Almacenes(id_almacen),
     FOREIGN KEY (id_usuario) REFERENCES Usuarios(id_usuario)
 ) ENGINE=InnoDB;
+
+-- Cambios a Verificar
+ALTER TABLE Ordenes_Produccion ADD COLUMN id_lote INT NULL AFTER id_orden;
+CREATE INDEX idx_ordenes_lote ON Ordenes_Produccion (id_lote);
+
+ALTER TABLE Ordenes_Produccion MODIFY COLUMN estado_orden
+  ENUM('Iniciada','En Corte','En Costura','Terminada','Cancelada') NOT NULL DEFAULT 'Iniciada';
+-- -------------------------------------------
+
+
+-- Insert de prueba de articulos para KARDEX
+INSERT INTO Articulos (
+    codigo_articulo, 
+    nombre_articulo, 
+    tipo_articulo, 
+    id_unidad_base_medida, 
+    stock_minimo, 
+    costo_promedio, 
+    estado_articulo
+) VALUES
+-- Telas para tus prendas terminadas
+('TEL-002', 'Cuero Sintético Negro 1.40m', 'MateriaPrima', 1, 25.00, 48.5000, 1),
+('TEL-003', 'Popelina Blanca 100% Algodón', 'MateriaPrima', 1, 50.00, 22.0000, 1),
+('TEL-004', 'Bramante Blanco 144 Hilos (Sábanas)', 'MateriaPrima', 1, 60.00, 28.0000, 1),
+('TEL-005', 'Denim Rígido Azul 14 Oz', 'MateriaPrima', 1, 40.00, 32.5000, 1),
+
+-- Insumos de confección
+('INS-001', 'Hilo Poliéster 40/2 Negro', 'Insumo', 12, 10.00, 18.0000, 1),
+('INS-002', 'Hilo Poliéster 40/2 Blanco', 'Insumo', 12, 10.00, 18.0000, 1);

@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using MaquilaBackend.Data;
 using MaquilaBackend.DTOs;
 using MaquilaBackend.Models;
+using MaquilaBackend.Helpers;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -18,6 +19,7 @@ public class AuthController : ControllerBase
 {
     private readonly MaquilaDbContext _context;
     private readonly IConfiguration _configuration;
+    private const int MODULO_SEGURIDAD_ID = 1;
 
     public AuthController(MaquilaDbContext context, IConfiguration configuration)
     {
@@ -31,22 +33,36 @@ public class AuthController : ControllerBase
         var input = dto.Identificador?.Trim() ?? string.Empty;
         var passwordInput = dto.Password?.Trim() ?? string.Empty;
 
-        var usuario = await _context.Usuarios
-            .Include(u => u.UsuarioRoles)
-            .ThenInclude(ur => ur.Rol)
-            .FirstOrDefaultAsync(u => u.Correo.ToLower() == input.ToLower() || u.NombreUsuario.ToLower() == input.ToLower());
+        if (string.IsNullOrWhiteSpace(input) || string.IsNullOrWhiteSpace(passwordInput))
+            return Unauthorized(new { message = "Ingresa tu usuario/correo y contraseña." });
 
+        //búsqueda directa sin Include pesado
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.Correo == input || u.NombreUsuario == input);
+
+        // Si el usuario no existe, se rechaza de inmediato
         if (usuario == null)
             return Unauthorized(new { message = "El usuario o correo no existe en el sistema." });
 
         if (!usuario.EstadoUsuario)
             return Unauthorized(new { message = "Tu cuenta se encuentra inactiva. Contacta al administrador." });
 
-        // Bloqueo temporal por intentos fallidos (usa campos que ya tenías en el modelo, antes sin uso)
+        //Comprobar si la cuenta está bloqueada temporalmente
         if (usuario.FechaBloqueo.HasValue && usuario.FechaBloqueo.Value > DateTime.UtcNow)
-            return Unauthorized(new { message = "Tu cuenta está bloqueada temporalmente por múltiples intentos fallidos. Intenta más tarde." });
+        {
+            var restante = usuario.FechaBloqueo.Value - DateTime.UtcNow;
+            var segundos = Math.Max(1, (int)restante.TotalSeconds);
+            var textoTiempo = segundos > 60 ? $"{Math.Ceiling(segundos / 60.0)} minuto(s)" : $"{segundos} segundo(s)";
 
-        bool passwordValida;
+            return StatusCode(429, new
+            {
+                message = $"5 intentos alcanzados. Cuenta bloqueada temporalmente por seguridad. Espera {textoTiempo}.",
+                segundosRestantes = segundos
+            });
+        }
+
+        //Verificación de contraseña con BCrypt
+        bool passwordValida = false;
         try
         {
             passwordValida = BCrypt.Net.BCrypt.Verify(passwordInput, usuario.PasswordHash);
@@ -59,39 +75,51 @@ public class AuthController : ControllerBase
         if (!passwordValida)
         {
             usuario.IntentosFallidos++;
-            if (usuario.IntentosFallidos >= 5)
-                usuario.FechaBloqueo = DateTime.UtcNow.AddMinutes(15);
+
+            if (usuario.IntentosFallidos == 5)
+            {
+                usuario.FechaBloqueo = DateTime.UtcNow.AddMinutes(1);
+            }
+            else if (usuario.IntentosFallidos > 5)
+            {
+                usuario.FechaBloqueo = DateTime.UtcNow.AddMinutes(3);
+            }
 
             await _context.SaveChangesAsync();
-            return Unauthorized(new { message = "Contraseña incorrecta." });
+
+            if (usuario.FechaBloqueo.HasValue)
+            {
+                int segs = (int)(usuario.FechaBloqueo.Value - DateTime.UtcNow).TotalSeconds;
+                return StatusCode(429, new
+                {
+                    message = "5 intentos alcanzados. Espera 1 minuto para volver a intentar.",
+                    segundosRestantes = segs
+                });
+            }
+
+            int restantes = Math.Max(0, 5 - usuario.IntentosFallidos);
+            return Unauthorized(new
+            {
+                message = $"Contraseña incorrecta. Te quedan {restantes} intento(s) antes del bloqueo temporal."
+            });
         }
 
+        // Credenciales válidas: reiniciar contadores
         usuario.IntentosFallidos = 0;
         usuario.FechaBloqueo = null;
         usuario.FechaUltimoAcceso = DateTime.UtcNow;
 
-        var logAcceso = new Bitacora
-        {
-            IdUsuario = usuario.IdUsuario,
-            IdModulo = 1, // Módulo USUARIOS / SEGURIDAD
-            Accion = "LOGIN",
-            TablaAfectada = "Usuarios",
-            IdRegistro = usuario.IdUsuario.ToString(),
-            ValoresAnteriores = null,
-            ValoresNuevos = JsonSerializer.Serialize(new
-            {
-                Evento = "Inicio de sesión exitoso",
-                Usuario = usuario.NombreUsuario,
-                Fecha = DateTime.UtcNow
-            }),
-            DireccionIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
-            FechaRegistro = DateTime.UtcNow
-        };
-        _context.Bitacora.Add(logAcceso);
+        // Cargar roles y permisos únicamente cuando el login fue exitoso
+        var rolesIds = await _context.UsuarioRoles
+            .Where(ur => ur.IdUsuario == usuario.IdUsuario)
+            .Select(ur => ur.IdRol)
+            .ToListAsync();
 
-        await _context.SaveChangesAsync();
-
-        var rolesIds = usuario.UsuarioRoles.Select(ur => ur.IdRol).ToList();
+        var rolEntidad = await _context.UsuarioRoles
+            .Include(ur => ur.Rol)
+            .Where(ur => ur.IdUsuario == usuario.IdUsuario)
+            .Select(ur => ur.Rol.NombreRol)
+            .FirstOrDefaultAsync();
 
         var permisosDb = await _context.PermisosRol
             .Include(pr => pr.Modulo)
@@ -111,8 +139,24 @@ public class AuthController : ControllerBase
             ))
             .ToList();
 
-        var rolNombre = usuario.UsuarioRoles.FirstOrDefault()?.Rol.NombreRol ?? "Usuario";
-        var token = GenerarToken(usuario, rolNombre);
+        var rolNombre = rolEntidad ?? "Usuario";
+        var token = GenerarToken(usuario, rolNombre, dto.Recordarme);
+
+        // bitacora
+        _context.Bitacora.Add(new Bitacora
+        {
+            IdUsuario = usuario.IdUsuario,
+            IdModulo = MODULO_SEGURIDAD_ID,
+            Accion = "LOGIN",
+            TablaAfectada = "Usuarios",
+            IdRegistro = usuario.IdUsuario.ToString(),
+            ValoresAnteriores = null,
+            ValoresNuevos = JsonSerializer.Serialize(new { Evento = "Login exitoso", Usuario = usuario.NombreUsuario }),
+            DireccionIp = HttpContext.ObtenerIpCliente(),
+            FechaRegistro = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
 
         return Ok(new LoginResponseDto(
             usuario.IdUsuario,
@@ -124,10 +168,6 @@ public class AuthController : ControllerBase
         ));
     }
 
-    /// <summary>
-    /// Permite al frontend validar/refrescar los datos de sesión (por ejemplo, al recargar la página)
-    /// usando únicamente el token, sin depender de lo que haya en localStorage.
-    /// </summary>
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
@@ -146,7 +186,7 @@ public class AuthController : ControllerBase
         return Ok(new { usuario.IdUsuario, usuario.NombreUsuario, usuario.Correo });
     }
 
-    private string GenerarToken(Usuario usuario, string rolNombre)
+    private string GenerarToken(Usuario usuario, string rolNombre, bool recordarme)
     {
         var jwtSection = _configuration.GetSection("Jwt");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection["Key"]!));
@@ -160,7 +200,7 @@ public class AuthController : ControllerBase
             new(ClaimTypes.Role, rolNombre)
         };
 
-        var expireMinutes = double.Parse(jwtSection["ExpireMinutes"] ?? "480");
+        double expireMinutes = recordarme ? (7 * 24 * 60) : double.Parse(jwtSection["ExpireMinutes"] ?? "480");
 
         var token = new JwtSecurityToken(
             issuer: jwtSection["Issuer"],

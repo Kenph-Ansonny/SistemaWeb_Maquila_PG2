@@ -85,6 +85,14 @@ const showEstadoModal = ref(false)
 const pedidoParaEstado = ref(null)
 const nuevoEstadoSeleccionado = ref('')
 
+// ---------- Modal: Editar solo la fecha de entrega ----------
+// Funciona aunque el pedido ya no esté "Registrado" (solo se bloquea en Cancelado/Entregado):
+// las fechas de entrega cambian por razones del cliente, no deberían quedar congeladas solo
+// porque la producción ya arrancó. Ver PedidosController.ActualizarFechaEntrega.
+const showFechaModal = ref(false)
+const pedidoParaFecha = ref(null)
+const nuevaFechaEntrega = ref('')
+
 // Fecha mínima permitida (Hoy)
 const hoyISO = computed(() => new Date().toISOString().slice(0, 10))
 
@@ -179,12 +187,31 @@ const formatMoneda = (val) => new Intl.NumberFormat('es-GT', { style: 'currency'
 
 const puedeEditarOEliminar = (p) => p.estadoPedido === 'Registrado' && p.totalOrdenesProduccion === 0
 
+// A propósito, NO reutiliza puedeEditarOEliminar: la fecha puede cambiar aunque el pedido
+// ya tenga órdenes de producción o esté "En Produccion"/"Finalizado" (las líneas del pedido
+// sí quedan bloqueadas en ese caso, pero la fecha de entrega cambia por razones del cliente).
+// Solo se bloquea en los estados finales (Cancelado/Entregado), igual que en el backend.
+const puedeEditarFecha = (p) => p.estadoPedido !== 'Cancelado' && p.estadoPedido !== 'Entregado'
+
 // ---------- Gestión de Líneas en Formulario ----------
+// Si la prenda no tiene un costo promedio registrado (> 0), dejamos el precio
+// VACÍO (null) en vez de "0.00" — un 0 silencioso se ve igual que un precio
+// real mal tecleado y pasaba desapercibido; un campo vacío con el aviso en
+// rojo de abajo obliga a teclear el precio antes de poder agregar la fila.
 const onPrendaChange = () => {
   itemLineaForm.idReceta = recetasDePrenda.value[0]?.idReceta || ''
   const prenda = prendaSeleccionadaInfo.value
-  itemLineaForm.precioUnitarioAcordado = prenda ? Number((prenda.costoPromedio || 0).toFixed(2)) : 0
+  const costo = prenda ? Number(prenda.costoPromedio || 0) : 0
+  itemLineaForm.precioUnitarioAcordado = costo > 0 ? Number(costo.toFixed(2)) : null
 }
+
+// Por qué no hay un precio sugerido para la prenda actualmente seleccionada
+// (se usa para mostrar el aviso en rojo bajo el campo de precio).
+const sinCostoSugerido = computed(() => {
+  if (editandoIndex.value !== null) return false
+  const prenda = prendaSeleccionadaInfo.value
+  return !!prenda && !(Number(prenda.costoPromedio || 0) > 0)
+})
 
 const seleccionarLineaParaEditar = (index) => {
   editandoIndex.value = index
@@ -263,8 +290,17 @@ const procesarLinea = () => {
       precioUnitarioAcordado: Number(precioUnitarioAcordado)
     })
 
+    // Antes se dejaba la misma prenda seleccionada y se recalculaba su precio,
+    // pero si esa prenda no tiene costo promedio registrado el campo volvía a
+    // mostrar "0.00" sin que el usuario lo notara (ya la había agregado una vez
+    // con el precio correcto tecleado a mano). Eso permitía que, al agregar la
+    // SIGUIENTE prenda sin fijarse, terminara entrando con precio 0 a la tabla
+    // y el error solo aparecía hasta el final, al guardar. Ahora limpiamos todo
+    // el formulario para obligar a elegir la prenda y su precio de nuevo cada vez.
+    itemLineaForm.idArticuloPrenda = ''
+    itemLineaForm.idReceta = ''
     itemLineaForm.cantidad = 1
-    itemLineaForm.precioUnitarioAcordado = 0
+    itemLineaForm.precioUnitarioAcordado = null
   }
 }
 
@@ -386,6 +422,19 @@ const validarFormPedido = () => {
   }
   if (formPedido.detalles.length === 0) {
     showAlert('Prendas Requeridas', 'Debes incluir al menos una prenda en el pedido.', 'error')
+    return false
+  }
+
+  // Defensa adicional: si por algún motivo una línea ya agregada quedó con
+  // precio o cantidad en 0, lo señalamos aquí con la prenda exacta en vez de
+  // dejar que el servidor lo rechace con un mensaje genérico.
+  const lineaInvalida = formPedido.detalles.find(d => !d.precioUnitarioAcordado || Number(d.precioUnitarioAcordado) <= 0)
+  if (lineaInvalida) {
+    showAlert(
+      'Precio Inválido en la Tabla',
+      `La prenda "${lineaInvalida.nombreArticulo}" tiene un precio de Q0.00 en la tabla. Selecciónala (haz clic en su fila) y corrige el precio antes de guardar.`,
+      'error'
+    )
     return false
   }
 
@@ -523,7 +572,7 @@ const solicitarConfirmacionEstado = () => {
     show: true,
     title: esCancelado ? '¿Cancelar este pedido?' : '¿Confirmar cambio de estado?',
     message: esCancelado
-      ? `El pedido "${pedidoParaEstado.value.numeroPedido}" cambiará a CANCELADO. Esta acción detendrá su ciclo operativo.`
+      ? `El pedido "${pedidoParaEstado.value.numeroPedido}" cambiará a CANCELADO. Si alguna de sus órdenes de producción ya tiene avance físico, el servidor rechazará la cancelación; si no, esas órdenes se cancelarán junto con el pedido.`
       : `El pedido "${pedidoParaEstado.value.numeroPedido}" avanzará de "${pedidoParaEstado.value.estadoPedido}" a "${estadoDestino}". ¿Deseas aplicar el cambio?`,
     type: esCancelado ? 'danger' : 'warning',
     action: async () => {
@@ -543,6 +592,40 @@ const ejecutarCambioEstado = async () => {
     await cargarPedidos()
   } catch (err) {
     showAlert('Error al Cambiar Estado', err.response?.data?.message || 'No se pudo cambiar el estado del pedido.', 'error')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// ---------- Editar solo la fecha de entrega ----------
+const abrirModalFecha = (p) => {
+  if (!can('PEDIDOS', 'modificar')) return
+  pedidoParaFecha.value = p
+  nuevaFechaEntrega.value = p.fechaEstimadaEntrega ? p.fechaEstimadaEntrega.slice(0, 10) : ''
+  showFechaModal.value = true
+}
+
+const cerrarModalFecha = () => {
+  if (isSaving.value) return
+  showFechaModal.value = false
+  pedidoParaFecha.value = null
+}
+
+const confirmarFecha = async () => {
+  if (isSaving.value || !pedidoParaFecha.value) return
+  if (nuevaFechaEntrega.value && nuevaFechaEntrega.value < hoyISO.value) {
+    showAlert('Fecha Inválida', 'La fecha estimada de entrega no puede ser anterior a hoy.', 'error')
+    return
+  }
+  isSaving.value = true
+  try {
+    const res = await pedidoService.actualizarFechaEntrega(pedidoParaFecha.value.idPedido, nuevaFechaEntrega.value || null)
+    showAlert('Fecha Actualizada', res?.data?.message || res?.message || 'La fecha de entrega fue actualizada.')
+    showFechaModal.value = false
+    pedidoParaFecha.value = null
+    await cargarPedidos()
+  } catch (err) {
+    showAlert('Error', err.response?.data?.message || 'No se pudo actualizar la fecha de entrega.', 'error')
   } finally {
     isSaving.value = false
   }
@@ -759,11 +842,23 @@ const solicitarEliminar = (p) => {
                       </svg>
                       <span>{{ formatFecha(p.fechaEmision) }}</span>
                     </div>
-                    <div v-if="p.fechaEstimadaEntrega" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
-                      <span class="text-indigo-500 font-black">Entrega:</span> {{ formatFecha(p.fechaEstimadaEntrega) }}
-                    </div>
-                    <div v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                      <span>Sin fecha definida</span>
+                    <div class="flex items-center gap-1">
+                      <div v-if="p.fechaEstimadaEntrega" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+                        <span class="text-indigo-500 font-black">Entrega:</span> {{ formatFecha(p.fechaEstimadaEntrega) }}
+                      </div>
+                      <div v-else class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span>Sin fecha definida</span>
+                      </div>
+                      <button
+                        v-if="can('PEDIDOS', 'modificar') && puedeEditarFecha(p)"
+                        @click="abrirModalFecha(p)"
+                        title="Cambiar fecha de entrega (disponible aunque el pedido ya esté en producción)"
+                        class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-purple-100 border border-purple-300 text-purple-700 hover:bg-purple-600 hover:border-purple-600 hover:text-white active:scale-95 transition-all shadow-sm shrink-0"
+                      >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </td>
@@ -913,6 +1008,7 @@ const solicitarEliminar = (p) => {
                     @change="onPrendaChange"
                     class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-purple-500"
                   >
+                    <option value="" disabled>Selecciona una prenda…</option>
                     <option v-for="pt in prendasTerminadas" :key="pt.idArticulo" :value="pt.idArticulo">
                       {{ pt.nombreArticulo }} ({{ pt.codigoArticulo }})
                     </option>
@@ -925,7 +1021,8 @@ const solicitarEliminar = (p) => {
                     v-model="itemLineaForm.idReceta"
                     class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-purple-500"
                   >
-                    <option v-if="recetasDePrenda.length === 0" value="" disabled>Sin fichas técnicas activas</option>
+                    <option v-if="!itemLineaForm.idArticuloPrenda" value="" disabled>Selecciona primero una prenda</option>
+                    <option v-else-if="recetasDePrenda.length === 0" value="" disabled>Sin fichas técnicas activas</option>
                     <option v-for="r in recetasDePrenda" :key="r.idReceta" :value="r.idReceta">
                       {{ r.nombreReceta }}
                     </option>
@@ -939,6 +1036,7 @@ const solicitarEliminar = (p) => {
                     type="number"
                     min="1"
                     step="1"
+                    @keydown.enter.prevent="procesarLinea"
                     class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 outline-none focus:border-purple-500"
                   />
                 </div>
@@ -950,8 +1048,18 @@ const solicitarEliminar = (p) => {
                     type="number"
                     min="0.01"
                     step="0.01"
-                    class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 outline-none focus:border-purple-500"
+                    placeholder="0.00"
+                    @keydown.enter.prevent="procesarLinea"
+                    :class="[
+                      'w-full px-3 py-2 bg-white border rounded-xl text-xs font-mono font-bold text-slate-900 outline-none',
+                      !itemLineaForm.precioUnitarioAcordado
+                        ? 'border-rose-400 ring-1 ring-rose-200 focus:border-rose-500'
+                        : 'border-slate-200 focus:border-purple-500'
+                    ]"
                   />
+                  <p v-if="sinCostoSugerido" class="mt-1 text-[10px] font-bold text-rose-600">
+                    Sin costo promedio registrado — ingresa el precio a mano.
+                  </p>
                 </div>
 
                 <div class="sm:col-span-1 flex gap-1">
@@ -1279,7 +1387,7 @@ const solicitarEliminar = (p) => {
           </div>
 
           <p v-if="nuevoEstadoSeleccionado === 'Cancelado'" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-3 mb-4">
-            Advertencia: Cancelar este pedido detendrá la producción. El servidor validará que no existan piezas cortadas o confeccionadas[cite: 5].
+            Advertencia: si alguna orden de producción vinculada ya tiene avance físico (piezas cortadas o confeccionadas), el servidor rechazará esta cancelación. Si no tiene avance, sus órdenes se cancelarán automáticamente junto con el pedido.
           </p>
 
           <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
@@ -1292,6 +1400,40 @@ const solicitarEliminar = (p) => {
               class="px-5 py-2 text-xs font-bold text-white bg-gradient-to-tl from-purple-700 to-pink-500 rounded-xl shadow-md transition disabled:opacity-50"
             >
               Continuar
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Modal: Editar solo Fecha de Entrega -->
+    <Transition name="fade">
+      <div v-if="showFechaModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl p-6 shadow-2xl w-full max-w-sm border border-slate-100 animate-scale-in">
+          <h3 class="text-base font-black text-slate-900 mb-0.5">Cambiar Fecha de Entrega</h3>
+          <p class="text-xs text-slate-500 font-semibold mb-4">{{ pedidoParaFecha?.numeroPedido }} · {{ pedidoParaFecha?.nombreCliente }}</p>
+
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nueva fecha estimada de entrega</label>
+          <input
+            v-model="nuevaFechaEntrega"
+            type="date"
+            :min="hoyISO"
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+          />
+          <p class="text-slate-400 text-[11px] mt-2 leading-relaxed">
+            Esto solo cambia la fecha; las prendas y cantidades del pedido no se tocan. Funciona aunque el pedido ya esté en producción (solo se bloquea si está Cancelado o Entregado).
+          </p>
+
+          <div class="flex justify-end gap-2 pt-4 border-t border-slate-100 mt-4">
+            <button @click="cerrarModalFecha" :disabled="isSaving" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">
+              Cancelar
+            </button>
+            <button
+              @click="confirmarFecha"
+              :disabled="isSaving"
+              class="px-5 py-2 text-xs font-bold text-white bg-gradient-to-tl from-purple-700 to-pink-500 rounded-xl shadow-md transition disabled:opacity-50"
+            >
+              {{ isSaving ? 'Guardando...' : 'Guardar Fecha' }}
             </button>
           </div>
         </div>
